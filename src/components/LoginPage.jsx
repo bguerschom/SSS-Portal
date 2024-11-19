@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { User, Lock } from 'lucide-react';
 
@@ -10,10 +9,10 @@ const LoginPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-lg" // Adjusted to a balanced width
+        className="w-full max-w-lg"
       >
-        <Card className="w-full bg-white rounded-xl shadow-2xl overflow-hidden">
-          <div className="p-10"> {/* Slightly adjusted padding */}
+        <div className="w-full bg-white rounded-xl shadow-2xl overflow-hidden">
+          <div className="p-10">
             {/* Logo Container */}
             <motion.div 
               className="flex justify-center mb-10"
@@ -22,7 +21,7 @@ const LoginPage = () => {
               transition={{ duration: 0.5 }}
             >
               <img 
-                src="/api/placeholder/150/150"
+                src="/logo.png"
                 alt="Logo"
                 className="h-28 w-auto"
               />
@@ -116,7 +115,7 @@ const LoginPage = () => {
               </motion.button>
             </form>
           </div>
-        </Card>
+        </div>
       </motion.div>
     </div>
   );
