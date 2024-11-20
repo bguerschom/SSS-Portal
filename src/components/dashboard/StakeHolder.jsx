@@ -385,6 +385,9 @@ const StakeholderForm = ({ onNavigate }) => {
         );
 
       case 3:
+            if (subItem === 'Pending') {
+      return <PendingRequests />;
+    }
         return (
           <div className="space-y-6">
             {/* Description */}
