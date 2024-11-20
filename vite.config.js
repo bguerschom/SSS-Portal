@@ -14,4 +14,6 @@ export default defineConfig({
     assetsDir: 'assets',
   },
   publicDir: 'public',
+  root: './', // Add this line
+  base: './', // Add this line
 })
