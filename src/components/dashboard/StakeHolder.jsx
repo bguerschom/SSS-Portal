@@ -1,10 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Search, Filter } from 'lucide-react';
 import PageLayout from '../shared/PageLayout';
+import { db } from '../../config/firebase';
 
 const StakeHolder = ({ onNavigate, subItem }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [newRequest, setNewRequest] = useState({
+    dateReceived: '',
+    referenceNumber: '',
+    senderSource: '',
+    subject: '',
+    status: '',
+    response: '',
+    answeredBy: '',
+  });
+  const [pendingRequests, setPendingRequests] = useState([]);
+
+  useEffect(() => {
+    const unsubscribe = db
+      .collection('stakeholderRequests')
+      .where('status', '==', 'Pending')
+      .onSnapshot((snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPendingRequests(data);
+      });
+
+    return unsubscribe;
+  }, [db]);
+
+  const handleNewRequestSubmit = async () => {
+    try {
+      await db.collection('stakeholderRequests').add(newRequest);
+      console.log('New stakeholder request saved to Firestore');
+      setNewRequest({
+        dateReceived: '',
+        referenceNumber: '',
+        senderSource: '',
+        subject: '',
+        status: '',
+        response: '',
+        answeredBy: '',
+      });
+    } catch (error) {
+      console.error('Error saving new stakeholder request:', error);
+    }
+  };
 
   const renderContent = () => {
     switch (subItem) {
@@ -12,8 +56,45 @@ const StakeHolder = ({ onNavigate, subItem }) => {
         return (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold mb-4">New Stake Holder Request</h2>
-            <p className="text-gray-600 mb-4">Create a new stake holder request form here.</p>
-            {/* Add your form components here */}
+            <form onSubmit={handleNewRequestSubmit}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="dateReceived" className="block text-gray-700 font-medium mb-2">
+                    Date Received
+                  </label>
+                  <input
+                    type="date"
+                    id="dateReceived"
+                    value={newRequest.dateReceived}
+                    onChange={(e) =>
+                      setNewRequest({ ...newRequest, dateReceived: e.target.value })
+                    }
+                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="referenceNumber" className="block text-gray-700 font-medium mb-2">
+                    Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    id="referenceNumber"
+                    value={newRequest.referenceNumber}
+                    onChange={(e) =>
+                      setNewRequest({ ...newRequest, referenceNumber: e.target.value })
+                    }
+                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              {/* Add other form fields here */}
+              <button
+                type="submit"
+                className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              >
+                Save
+              </button>
+            </form>
           </div>
         );
       case 'Update':
@@ -43,13 +124,25 @@ const StakeHolder = ({ onNavigate, subItem }) => {
                 <span>Filter</span>
               </button>
             </div>
-            
             <div className="bg-white rounded-lg shadow-sm">
               <div className="p-4 border-b border-gray-100">
                 <h2 className="text-lg font-semibold">Pending Requests</h2>
               </div>
               <div className="p-4">
-                <p className="text-gray-600">No pending requests found.</p>
+                {pendingRequests.length > 0 ? (
+                  <ul>
+                    {pendingRequests.map((request) => (
+                      <li key={request.id} className="py-2 border-b border-gray-100">
+                        <h3 className="text-gray-800 font-medium">{request.subject}</h3>
+                        <p className="text-gray-600">
+                          Received on {request.dateReceived} - Ref. {request.referenceNumber}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-600">No pending requests found.</p>
+                )}
               </div>
             </div>
           </div>
