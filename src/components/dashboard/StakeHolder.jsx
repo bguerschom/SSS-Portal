@@ -46,14 +46,15 @@ const steps = [
   }
 ];
 
+
 const [subItem, setSubItem] = useState('');
 
 const handleSubItemChange = (value) => {
   setSubItem(value);
 };
 
-
 const StakeholderForm = ({ onNavigate }) => {
+    const [subItem, setSubItem] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     dateReceived: '',
