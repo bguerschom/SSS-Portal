@@ -1,180 +1,184 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Search, Filter } from 'lucide-react';
-import PageLayout from '../shared/PageLayout';
+import React, { useState } from 'react';
+import firebase from 'firebase/app';
+import 'firebase/firestore';
 
-const StakeHolder = ({ onNavigate, subItem }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [newRequest, setNewRequest] = useState({
+// Initialize Firebase
+const firebaseConfig = {
+  // Your Firebase configuration details
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const StakeholderRequestForm = () => {
+  const [formData, setFormData] = useState({
     dateReceived: '',
     referenceNumber: '',
     senderSource: '',
+    senderSourceOther: '',
     subject: '',
+    subjectOther: '',
     status: '',
     response: '',
     answeredBy: '',
   });
 
-  const handleNewRequestSubmit = () => {
-    console.log('New stakeholder request data:', newRequest);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
-  const renderContent = () => {
-    switch (subItem) {
-      case 'New Request':
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">New Stake Holder Request</h2>
-<form onSubmit={handleNewRequestSubmit}>
-              <div className="grid grid-cols-2 gap-4">
-                {/* ... other fields ... */}
-                <div>
-                  <label htmlFor="senderSource" className="block text-gray-700 font-medium mb-2">
-                    Sender/Sources
-                  </label>
-                  <select
-                    id="senderSource"
-                    value={newRequest.senderSource}
-                    onChange={(e) =>
-                      setNewRequest({ ...newRequest, senderSource: e.target.value })
-                    }
-                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select Sender/Sources</option>
-                    <option value="NPPA">NPPA</option>
-                    <option value="RIB">RIB</option>
-                    <option value="MPG">MPG</option>
-                    <option value="Private Advocate">Private Advocate</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {newRequest.senderSource === 'Other' && (
-                    <input
-                      type="text"
-                      placeholder="Enter other sender/source"
-                      value={newRequest.senderSource}
-                      onChange={(e) =>
-                        setNewRequest({ ...newRequest, senderSource: e.target.value })
-                      }
-                      className="mt-2 w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="subject" className="block text-gray-700 font-medium mb-2">
-                    Subject/Topic
-                  </label>
-                  <select
-                    id="subject"
-                    value={newRequest.subject}
-                    onChange={(e) =>
-                      setNewRequest({ ...newRequest, subject: e.target.value })
-                    }
-                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select Subject/Topic</option>
-                    <option value="account unblock">Account Unblock</option>
-                    <option value="MoMo Transaction">MoMo Transaction</option>
-                    <option value="Call History">Call History</option>
-                    <option value="Reversal">Reversal</option>
-                    <option value="MoMo Transaction & Call History">MoMo Transaction & Call History</option>
-                    <option value="Account Information">Account Information</option>
-                    <option value="Account Status">Account Status</option>
-                    <option value="Balance">Balance</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {newRequest.subject === 'Other' && (
-                    <input
-                      type="text"
-                      placeholder="Enter other subject/topic"
-                      value={newRequest.subject}
-                      onChange={(e) =>
-                        setNewRequest({ ...newRequest, subject: e.target.value })
-                      }
-                      className="mt-2 w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="status" className="block text-gray-700 font-medium mb-2">
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    value={newRequest.status}
-                    onChange={(e) =>
-                      setNewRequest({ ...newRequest, status: e.target.value })
-                    }
-                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Answered">Answered</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="answeredBy" className="block text-gray-700 font-medium mb-2">
-                    Answered By
-                  </label>
-                  <select
-                    id="answeredBy"
-                    value={newRequest.answeredBy}
-                    onChange={(e) =>
-                      setNewRequest({ ...newRequest, answeredBy: e.target.value })
-                    }
-                    className="w-full border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
-                  >
-                    <option value="">Select Answered By</option>
-                    <option value="bigirig">bigirig</option>
-                    <option value="isimbie">isimbie</option>
-                    <option value="niragit">niragit</option>
-                    <option value="nkomatm">nkomatm</option>
-                    <option value="tuyisec">tuyisec</option>
-                  </select>
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-              >
-                Save
-              </button>
-            </form>
-          </div>
-        );
-      case 'Update':
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Update Stake Holder Request</h2>
-            <p className="text-gray-600 mb-4">Update existing stake holder requests.</p>
-            {/* Add your update form/list here */}
-          </div>
-        );
-      case 'Pending':
-        return (
-          <div className="space-y-4">
-            {/* Pending requests content */}
-          </div>
-        );
-      default:
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Stake Holder Requests</h2>
-            <p className="text-gray-600">Select an action from the sidebar to get started.</p>
-          </div>
-        );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await db.collection('stakeholderRequests').add(formData);
+      console.log('Data saved to Firebase');
+      // Reset the form
+      setFormData({
+        dateReceived: '',
+        referenceNumber: '',
+        senderSource: '',
+        senderSourceOther: '',
+        subject: '',
+        subjectOther: '',
+        status: '',
+        response: '',
+        answeredBy: '',
+      });
+    } catch (error) {
+      console.error('Error saving data to Firebase:', error);
     }
   };
 
   return (
-    <PageLayout
-      title="Stake Holder Request"
-      icon={FileText}
-      activePage="stakeholder"
-      onNavigate={onNavigate}
-    >
-      {renderContent()}
-    </PageLayout>
+    <form onSubmit={handleSubmit} className="p-6 rounded-lg shadow-md bg-white">
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block mb-2 font-medium">Date Received:</label>
+          <input
+            type="date"
+            name="dateReceived"
+            value={formData.dateReceived}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Reference Number:</label>
+          <input
+            type="text"
+            name="referenceNumber"
+            value={formData.referenceNumber}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Sender/Sources:</label>
+          <select
+            name="senderSource"
+            value={formData.senderSource}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select Sender/Source</option>
+            <option value="NPPA">NPPA</option>
+            <option value="RIB">RIB</option>
+            <option value="MPG">MPG</option>
+            <option value="Private Advocate">Private Advocate</option>
+            <option value="Other">Other</option>
+          </select>
+          {formData.senderSource === 'Other' && (
+            <input
+              type="text"
+              name="senderSourceOther"
+              value={formData.senderSourceOther}
+              onChange={handleInputChange}
+              placeholder="Enter Other Sender/Source"
+              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          )}
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Subject/Topic:</label>
+          <select
+            name="subject"
+            value={formData.subject}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select Subject/Topic</option>
+            <option value="account unblock">Account Unblock</option>
+            <option value="MoMo Transaction">MoMo Transaction</option>
+            <option value="Call History">Call History</option>
+            <option value="Reversal">Reversal</option>
+            <option value="MoMo Transaction & Call History">MoMo Transaction & Call History</option>
+            <option value="Account Information">Account Information</option>
+            <option value="Account Status">Account Status</option>
+            <option value="Balance">Balance</option>
+            <option value="Other">Other</option>
+          </select>
+          {formData.subject === 'Other' && (
+            <input
+              type="text"
+              name="subjectOther"
+              value={formData.subjectOther}
+              onChange={handleInputChange}
+              placeholder="Enter Other Subject/Topic"
+              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          )}
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Status:</label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Answered">Answered</option>
+          </select>
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Response Date:</label>
+          <input
+            type="date"
+            name="response"
+            value={formData.response}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block mb-2 font-medium">Answered By:</label>
+          <select
+            name="answeredBy"
+            value={formData.answeredBy}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Select Answered By</option>
+            <option value="bigirig">bigirig</option>
+            <option value="isimbie">isimbie</option>
+            <option value="niragit">niragit</option>
+            <option value="nkomatm">nkomatm</option>
+            <option value="tuyisec">tuyisec</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex justify-end mt-6">
+        <button
+          type="submit"
+          className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-300"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
   );
 };
 
-export default StakeHolder;
+export default StakeholderRequestForm;
