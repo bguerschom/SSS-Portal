@@ -57,32 +57,50 @@ const WelcomePage = ({ username, onLogout }) => {
     setExpandedCard(expandedCard === index ? null : index);
   };
 
-  const menuItems = [
-    {
-      icon: FileText,
-      text: 'Stake Holder Request',
-      subItems: ['New Request', 'Update'],
-      color: 'emerald'
-    },
-    {
-      icon: UserCheck,
-      text: 'Background Check Request',
-      subItems: ['New Request', 'Update'],
-      color: 'emerald'
-    },
-    {
-      icon: BadgeCheck,
-      text: 'Badge Request',
-      subItems: ['New Request'],
-      color: 'emerald'
-    },
-    {
-      icon: BarChart,
-      text: 'Reports',
-      subItems: ['SHR Report', 'BCR Report', 'BR Report'],
-      color: 'emerald'
-    }
-  ];
+const menuItems = [
+  {
+    icon: FileText,
+    text: 'Stake Holder Request',
+    subItems: ['New Request', 'Update', 'Pending'],
+    path: 'stakeholder'
+  },
+  {
+    icon: UserCheck,
+    text: 'Background Check Request',
+    subItems: ['New Request', 'Update', 'Pending'],
+    path: 'background'
+  },
+  {
+    icon: BadgeCheck,
+    text: 'Badge Request',
+    subItems: ['New Request', 'Pending'],
+    path: 'badge'
+  },
+  {
+    icon: Key,
+    text: 'Access Request',
+    subItems: ['New Request', 'Update', 'Pending'],
+    path: 'access'
+  },
+  {
+    icon: Users,
+    text: 'Attendance',
+    subItems: ['New Request', 'Update', 'Pending'],
+    path: 'attendance'
+  },
+  {
+    icon: UserPlus,
+    text: 'Visitors Management',
+    subItems: ['New Request', 'Update', 'Pending'],
+    path: 'visitors'
+  },
+  {
+    icon: BarChart,
+    text: 'Reports',
+    subItems: ['SHR Report', 'BCR Report', 'BR Report', 'Access Report', 'Attendance Report', 'Visitors Report'],
+    path: 'reports'
+  }
+];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
