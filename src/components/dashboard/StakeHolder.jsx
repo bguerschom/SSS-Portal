@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Search, Filter } from 'lucide-react';
 import PageLayout from '../shared/PageLayout';
-import { db } from './firebase';
 
 const StakeHolder = ({ onNavigate, subItem }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,25 +14,8 @@ const StakeHolder = ({ onNavigate, subItem }) => {
     response: '',
     answeredBy: '',
   });
-  const [pendingRequests, setPendingRequests] = useState([]);
-
-  useEffect(() => {
-    const unsubscribe = db
-      .collection('stakeholderRequests')
-      .where('status', '==', 'Pending')
-      .onSnapshot((snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPendingRequests(data);
-      });
-
-    return unsubscribe;
-  }, [db]);
 
   const handleNewRequestSubmit = () => {
-    // Disabled database save functionality
     console.log('New stakeholder request data:', newRequest);
   };
 
