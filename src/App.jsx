@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import LoginPage from './components/auth/LoginPage';
 import WelcomePage from './components/dashboard/WelcomePage';
 import StakeHolder from './components/dashboard/StakeHolder';
+import PendingRequests from './components/dashboard/PendingRequests';
 import BackgroundCheck from './components/dashboard/BackgroundCheck';
 import BadgeRequest from './components/dashboard/BadgeRequest';
 import AccessRequest from './components/dashboard/AccessRequest';
@@ -58,6 +59,9 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'stakeholder':
+                if (currentSubItem === 'Pending') {
+          return <PendingRequests />;
+        }
         return <StakeHolder onNavigate={handleNavigate} subItem={currentSubItem} />;
       case 'background':
         return <BackgroundCheck onNavigate={handleNavigate} subItem={currentSubItem} />;
