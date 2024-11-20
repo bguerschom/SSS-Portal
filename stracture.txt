@@ -1,0 +1,37 @@
+
+
+SSS-Portal/
+├── public/
+│   ├── index.html
+│   └── logo.png
+│
+├── src/
+│   ├── components/
+│   │   ├── auth/
+│   │   │   └── LoginPage.jsx            # Login page component
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── WelcomePage.jsx          # Main dashboard
+│   │   │   ├── StakeHolder.jsx          # Stake Holder Request management
+│   │   │   ├── BackgroundCheck.jsx      # Background Check management
+│   │   │   ├── BadgeRequest.jsx         # Badge Request management
+│   │   │   ├── AccessRequest.jsx        # Access Request management
+│   │   │   ├── Attendance.jsx           # Attendance management
+│   │   │   ├── VisitorsManagement.jsx   # Visitors management
+│   │   │   └── Reports.jsx              # Reports and analytics
+│   │   │
+│   │   └── shared/
+│   │       ├── PageLayout.jsx           # Common page layout wrapper
+│   │       └── Sidebar.jsx              # Shared navigation sidebar
+│   │
+│   ├── styles/
+│   │   └── index.css                    # Global styles and Tailwind imports
+│   │
+│   ├── App.jsx                          # Main application component
+│   └── main.jsx                         # Application entry point
+│
+├── .gitignore
+├── package.json
+├── postcss.config.js
+├── tailwind.config.js
+└── vite.config.js
