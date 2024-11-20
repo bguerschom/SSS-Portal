@@ -47,6 +47,19 @@ const SubMenuVariants = {
   visible: { opacity: 1, height: 'auto' }
 };
 
+const WelcomePage = ({ username, onLogout }) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [expandedCard, setExpandedCard] = useState(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleCardClick = (index) => {
+    setExpandedCard(expandedCard === index ? null : index);
+  };
+
 const menuItems = [
   {
     icon: FileText,
