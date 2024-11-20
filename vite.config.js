@@ -12,8 +12,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      external: [],
+    }
   },
-  publicDir: 'public',
-  root: './', // Add this line
-  base: './', // Add this line
+  optimizeDeps: {
+    include: ['firebase/app', 'firebase/auth', 'firebase/firestore']
+  }
 })
