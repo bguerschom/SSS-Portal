@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Lock } from 'lucide-react';
+import { auth } from '../../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase/config';
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
