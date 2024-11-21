@@ -829,12 +829,7 @@ const renderUpdateForm = () => (
           </h1>
         </div>
 
-                {/* Center the form content */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-4xl"> {/* Added max width constraint */}
-            {renderMainContent()}
-          </div>
-        </div>
+
 
           {renderMainContent()}
 
