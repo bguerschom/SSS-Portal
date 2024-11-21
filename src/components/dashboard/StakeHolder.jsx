@@ -1056,101 +1056,14 @@ const renderStepContent = () => {
 
 
 
+
           {/* Form Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm"
+            className="max-w-3xl mx-auto"
           >
-            {/* Card Header */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {steps[currentStep - 1].title}
-              </h2>
-              <p className="text-sm text-gray-500">
-                {steps[currentStep - 1].description}
-              </p>
-            </div>
-
-            {/* Card Content */}
-            <div className="p-6">
-              <form onSubmit={handleSubmit}>
-                {renderStepContent()}
-
-                {/* Messages */}
-                <AnimatePresence>
-                  {message.text && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className={`p-4 rounded-lg flex items-center space-x-2 mt-6 ${
-                        message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                      }`}
-                    >
-                      <AlertCircle className="h-5 w-5" />
-                      <span>{message.text}</span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Form Actions */}
-                <div className="flex justify-between mt-8">
-                  <motion.button
-                    type="button"
-                    onClick={() => currentStep > 1 && setCurrentStep(prev => prev - 1)}
-                    className={`px-6 py-2 flex items-center space-x-2 rounded-lg transition-colors ${
-                      currentStep === 1
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                    }`}
-                    disabled={currentStep === 1}
-                    whileHover={currentStep !== 1 ? { scale: 1.02 } : {}}
-                    whileTap={currentStep !== 1 ? { scale: 0.98 } : {}}
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                    <span>Previous</span>
-                  </motion.button>
-
-                  <div className="flex space-x-3">
-                    <motion.button
-                      type="button"
-                      onClick={handleReset}
-                      className="px-6 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
-                               rounded-lg transition-colors flex items-center space-x-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <RefreshCw className="h-5 w-5" />
-                      <span>Reset</span>
-                    </motion.button>
-
-                    <motion.button
-                      type="submit"
-                      disabled={isLoading}
-                      className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-                                transition-colors flex items-center space-x-2 ${
-                                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                      whileHover={!isLoading ? { scale: 1.02 } : {}}
-                      whileTap={!isLoading ? { scale: 0.98 } : {}}
-                    >
-                      {currentStep === steps.length ? (
-                        <>
-                          <Save className="h-5 w-5" />
-                          <span>{isLoading ? 'Saving...' : 'Submit'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Next</span>
-                          <ChevronRight className="h-5 w-5" />
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-              </form>
-            </div>
+            {renderStepContent()}
           </motion.div>
         </div>
       </div>
