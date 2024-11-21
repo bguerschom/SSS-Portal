@@ -821,13 +821,20 @@ const renderUpdateForm = () => (
     <div className="flex h-screen bg-gray-100">
       <Sidebar activePage="stakeholder" onNavigate={onNavigate} />
       
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {subItem ? `${subItem} Stakeholder Request` : 'New Stakeholder Request'}
-            </h1>
+    <div className="flex-1 ml-64 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {subItem ? `${subItem} Stakeholder Request` : 'New Stakeholder Request'}
+          </h1>
+        </div>
+
+                {/* Center the form content */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-4xl"> {/* Added max width constraint */}
+            {renderMainContent()}
           </div>
+        </div>
 
           {renderMainContent()}
 
