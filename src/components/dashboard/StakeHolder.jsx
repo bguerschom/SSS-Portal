@@ -52,6 +52,8 @@ const StakeholderForm = ({ onNavigate, subItem }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
 
+  const [successTimeout, setSuccessTimeout] = useState(null);
+
 useEffect(() => {
   if (subItem === 'Pending') {
     fetchPendingRequests();
@@ -225,6 +227,33 @@ useEffect(() => {
       await updateDoc(docRef, formData);
       
       setMessage({ type: 'success', text: 'Request updated successfully' });
+      if (successTimeout) {
+      clearTimeout(successTimeout);
+    }
+          const timeout = setTimeout(() => {
+      setMessage({ type: '', text: '' });
+            
+      
+      // Reset form and search
+      setFormData({
+        dateReceived: '',
+        referenceNumber: '',
+        sender: '',
+        otherSender: '',
+        subject: '',
+        otherSubject: '',
+        status: 'Pending',
+        responseDate: '',
+        answeredBy: '',
+        description: ''
+      });
+      setSearchTerm('');
+      setSearchResults([]);
+      setShowResults(false);
+      setSelectedRequest(null);
+    }, 5000); // 5 seconds
+
+    setSuccessTimeout(timeout);
       if (subItem === 'Pending') {
         fetchPendingRequests();
       } else {
@@ -236,6 +265,56 @@ useEffect(() => {
       setIsUpdating(false);
     }
   };
+
+  
+// Add cleanup effect for the timeout
+useEffect(() => {
+  // Cleanup function to clear timeout when component unmounts
+  return () => {
+    if (successTimeout) {
+      clearTimeout(successTimeout);
+    }
+  };
+}, [successTimeout]);
+
+// Modified message component with animation
+const MessageOverlay = () => (
+  <AnimatePresence>
+    {message.text && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+          message.type === 'success' 
+            ? 'bg-emerald-50 border border-emerald-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          {message.type === 'success' ? (
+            <CheckCircle className="h-5 w-5 text-emerald-500" />
+          ) : (
+            <AlertCircle className="h-5 w-5 text-red-500" />
+          )}
+          <span className={`${
+            message.type === 'success' ? 'text-emerald-700' : 'text-red-700'
+          }`}>
+            {message.text}
+          </span>
+          {message.type === 'success' && (
+            <motion.div
+              initial={{ width: '100%' }}
+              animate={{ width: '0%' }}
+              transition={{ duration: 5, ease: 'linear' }}
+              className={`absolute bottom-0 left-0 h-1 bg-emerald-500`}
+            />
+          )}
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
 
   const handleReset = () => {
     setFormData({
@@ -927,10 +1006,20 @@ const renderUpdateForm = () => (
                 whileHover={!isUpdating ? { scale: 1.02 } : {}}
                 whileTap={!isUpdating ? { scale: 0.98 } : {}}
               >
-                <Save className="h-5 w-5" />
-                <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
-              </motion.button>
-            </div>
+
+                    {isUpdating ? (
+      <>
+        <Loader className="h-5 w-5 animate-spin" />
+        <span>Updating...</span>
+      </>
+    ) : (
+      <>
+        <Save className="h-5 w-5" />
+        <span>Update Request</span>
+      </>
+    )}
+  </motion.button>
+</div>
           </form>
         </motion.div>
       )}
