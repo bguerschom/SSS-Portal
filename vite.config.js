@@ -7,14 +7,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'recharts': 'recharts/lib/recharts'
     },
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
-      external: ['recharts'],  // Add recharts to external
+      output: {
+        manualChunks: {
+          recharts: ['recharts']
+        }
+      }
     }
   },
   optimizeDeps: {
@@ -22,8 +25,13 @@ export default defineConfig({
       'firebase/app', 
       'firebase/auth', 
       'firebase/firestore',
-      'recharts',  // Add recharts to optimizeDeps
-      'recharts/lib/recharts'
-    ]
+      'recharts'
+    ],
+    esbuildOptions: {
+      target: 'es2020'
+    }
+  },
+  server: {
+    host: true
   }
 })
