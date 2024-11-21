@@ -179,19 +179,19 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
 
       {/* Main Content */}
       <div className="pt-24 px-6 pb-8">
-        {/* Welcome Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl text-white p-8 mb-8"
-        >
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
-            <p className="text-emerald-50 text-lg">
-              Select an option below to get started with your tasks
-            </p>
-          </div>
-        </motion.div>
+{/* Welcome Banner */}
+<motion.div
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl text-black p-8 mb-8"
+>
+  <div className="max-w-4xl mx-auto">
+    <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
+    <p className="text-black text-lg">
+      Select an option below to get started with your tasks
+    </p>
+  </div>
+</motion.div>
 
         {/* Menu Grid */}
         <div className="max-w-7xl mx-auto">
