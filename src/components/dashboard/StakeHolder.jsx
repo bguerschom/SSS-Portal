@@ -579,9 +579,6 @@ const renderStepContent = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -620,14 +617,6 @@ const renderStepContent = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {request.description}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <button
-                            onClick={() => handleSelectRequest(request)}
-                            className="text-emerald-600 hover:text-emerald-900 font-medium"
-                          >
-                            Update
-                          </button>
                         </td>
                       </motion.tr>
                     ))
