@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "recharts": "^2.12.3",
     "firebase": "^10.8.0",
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.263.1",
