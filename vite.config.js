@@ -7,7 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-
       'recharts': 'recharts/lib/recharts'
     },
   },
@@ -15,10 +14,16 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
-      external: [],
+      external: ['recharts'],  // Add recharts to external
     }
   },
   optimizeDeps: {
-    include: ['firebase/app', 'firebase/auth', 'firebase/firestore']
+    include: [
+      'firebase/app', 
+      'firebase/auth', 
+      'firebase/firestore',
+      'recharts',  // Add recharts to optimizeDeps
+      'recharts/lib/recharts'
+    ]
   }
 })
