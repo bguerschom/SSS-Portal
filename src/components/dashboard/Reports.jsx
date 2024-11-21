@@ -8,46 +8,17 @@ import {
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import Sidebar from '../shared/Sidebar';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts/lib/recharts';
-
-// Alternative approach if above doesn't work:
-import { LineChart, Line } from 'recharts/lib/chart/LineChart';
-import { BarChart, Bar } from 'recharts/lib/chart/BarChart';
-import { PieChart, Pie } from 'recharts/lib/chart/PieChart';
-import { XAxis } from 'recharts/lib/cartesian/XAxis';
-import { YAxis } from 'recharts/lib/cartesian/YAxis';
-import { CartesianGrid } from 'recharts/lib/cartesian/CartesianGrid';
-import { Tooltip } from 'recharts/lib/component/Tooltip';
-import { Legend } from 'recharts/lib/component/Legend';
-import { ResponsiveContainer } from 'recharts/lib/component/ResponsiveContainer';
-import { Cell } from 'recharts/lib/component/Cell';
+import ChartComponents from './ChartComponents';
 
 const Reports = ({ onNavigate }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('week');
-  const [filterType, setFilterType] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSender, setSelectedSender] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const COLORS = ['#059669', '#10B981', '#34D399', '#6EE7B7', '#A7F3D0'];
-  
   const dateRanges = {
     'today': 'Today',
     'week': 'Last 7 Days',
@@ -58,7 +29,7 @@ const Reports = ({ onNavigate }) => {
 
   useEffect(() => {
     fetchRequests();
-  }, [dateRange, filterType, selectedSender, selectedStatus]);
+  }, [dateRange, selectedSender, selectedStatus]);
 
   const getDateFilter = () => {
     const now = new Date();
@@ -153,7 +124,6 @@ const Reports = ({ onNavigate }) => {
   };
 
   const handleExport = () => {
-    // Implement export functionality
     const csvContent = [
       ['Reference Number', 'Date Received', 'Sender', 'Subject', 'Status', 'Response Date'],
       ...requests.map(request => [
@@ -327,7 +297,7 @@ const Reports = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-lg shadow-sm p-6"
+                className={`bg-white rounded-lg shadow-sm p-6 relative overflow-hidden`}
               >
                 <div className={`w-12 h-12 rounded-lg bg-${stat.color}-50 flex items-center justify-center mb-4`}>
                   <stat.icon className={`h-6 w-6 text-${stat.color}-500`} />
@@ -338,126 +308,14 @@ const Reports = ({ onNavigate }) => {
             ))}
           </div>
 
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Request Timeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Request Timeline</h2>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getTimelineData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="requests" stroke="#059669" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-
-            {/* Status Distribution */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Status Distribution</h2>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={getStatusData()}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percentage }) => `${name} (${percentage}%)`}
-                      outerRadius={120}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {getStatusData().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-
-            {/* Requests by Sender */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Requests by Sender</h2>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={getSenderData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="requests" fill="#059669" />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-
-            {/* Detailed Stats Table */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Detailed Statistics</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Count
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Percentage
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {getSenderData().map((sender, index) => (
-                      <motion.tr 
-                        key={sender.name}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="hover:bg-gray-50"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {sender.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {sender.requests}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {sender.percentage}%
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
+          {/* Charts Section */}
+          {!loading && (
+            <ChartComponents
+              timelineData={getTimelineData()}
+              statusData={getStatusData()}
+              senderData={getSenderData()}
+            />
+          )}
 
           {/* Quick Insights */}
           <motion.div
@@ -488,31 +346,53 @@ const Reports = ({ onNavigate }) => {
                   </span>
                 </div>
               </div>
+
+              {/* Additional Insights */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Top Sender</h3>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-emerald-500" />
+                  <span className="text-sm text-gray-600">
+                    {getSenderData()[0]?.name || 'N/A'} ({getSenderData()[0]?.percentage || 0}% of requests)
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Distribution */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-gray-700">Status Overview</h3>
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-emerald-500" />
+                  <span className="text-sm text-gray-600">
+                    {getStatusData()[0]?.name || 'N/A'} is the most common status ({getStatusData()[0]?.percentage || 0}%)
+                  </span>
+                </div>
+              </div>
             </div>
           </motion.div>
-        </motion.div>
 
-        {/* Loading Overlay */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-            >
+          {/* Loading Overlay */}
+          <AnimatePresence>
+            {loading && (
               <motion.div
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.9 }}
-                className="bg-white rounded-lg p-8 flex flex-col items-center space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
               >
-                <Loader className="h-8 w-8 text-emerald-500 animate-spin" />
-                <p className="text-gray-600">Loading report data...</p>
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.9 }}
+                  className="bg-white rounded-lg p-8 flex flex-col items-center space-y-4"
+                >
+                  <Loader className="h-8 w-8 text-emerald-500 animate-spin" />
+                  <p className="text-gray-600">Loading report data...</p>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     </div>
   );
