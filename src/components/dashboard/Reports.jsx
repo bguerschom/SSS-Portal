@@ -22,7 +22,7 @@ import {
   ResponsiveContainer,
   LineChart,
   Line
-} from 'recharts';
+} from from 'recharts/lib/recharts';
 
 const Reports = ({ onNavigate }) => {
   const [requests, setRequests] = useState([]);
