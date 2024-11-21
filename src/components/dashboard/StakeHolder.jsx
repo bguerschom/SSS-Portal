@@ -52,11 +52,30 @@ const StakeholderForm = ({ onNavigate, subItem }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
 
-  useEffect(() => {
-    if (subItem === 'Pending') {
-      fetchPendingRequests();
-    }
-  }, [subItem]);
+useEffect(() => {
+  if (subItem === 'Pending') {
+    fetchPendingRequests();
+  }
+  
+  // Clear all form data and states
+  setFormData({
+    dateReceived: '',
+    referenceNumber: '',
+    sender: '',
+    otherSender: '',
+    subject: '',
+    otherSubject: '',
+    status: 'Pending',
+    responseDate: '',
+    answeredBy: '',
+    description: ''
+  });
+  setSearchTerm('');
+  setSearchResults([]);
+  setShowResults(false);
+  setSelectedRequest(null);
+  setMessage({ type: '', text: '' });
+}, [subItem]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -623,124 +642,301 @@ className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm"
 );
 
 const renderUpdateForm = () => (
-<div className="space-y-6">
-<div className="bg-white rounded-xl shadow-sm p-6">
-<h2 className="text-lg font-semibold text-gray-800 mb-4">Search Request</h2>
-<div className="flex space-x-4">
-  <div className="flex-1 relative">
-    <input
-      type="text"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      placeholder="Enter Reference Number"
-      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-    />
-    {isLoading && (
-      <motion.div 
-        className="absolute right-3 top-1/2 transform -translate-y-1/2"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      >
-        <Loader className="h-5 w-5 text-emerald-500" />
-      </motion.div>
-    )}
-  </div>
-  <button
-    onClick={handleSearch}
-    className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-             transition-colors flex items-center space-x-2"
-  >
-    <Search className="h-5 w-5" />
-    <span>Check</span>
-  </button>
-</div>
+  <div className="space-y-6">
+    {/* Search Section */}
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">Search Request</h2>
+        <button
+          onClick={() => {
+            setSearchTerm('');
+            setSearchResults([]);
+            setShowResults(false);
+            setSelectedRequest(null);
+            setMessage({ type: '', text: '' });
+          }}
+          className="px-4 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
+                   rounded-lg transition-colors flex items-center space-x-2"
+        >
+          <RefreshCw className="h-5 w-5" />
+          <span>Reset</span>
+        </button>
+      </div>
 
-<AnimatePresence>
-  {showResults && (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="mt-4"
-    >
-      {searchResults.length > 0 ? (
-        <div className="space-y-2">
-          {searchResults.map((result) => (
-            <motion.div
-              key={result.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedRequest?.id === result.id
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-emerald-300'
-              }`}
-              onClick={() => handleSelectRequest(result)}
+      <div className="flex space-x-4">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Enter Reference Number"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+          {isLoading && (
+            <motion.div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <Loader className="h-5 w-5 text-emerald-500 animate-spin" />
+            </motion.div>
+          )}
+        </div>
+        <button
+          onClick={handleSearch}
+          className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                   transition-colors flex items-center space-x-2"
+        >
+          <Search className="h-5 w-5" />
+          <span>Check</span>
+        </button>
+      </div>
+
+      {/* Search Results */}
+      <AnimatePresence>
+        {showResults && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4"
+          >
+            {searchResults.length > 0 ? (
+              <div className="space-y-2">
+                {searchResults.map((result) => (
+                  <motion.div
+                    key={result.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedRequest?.id === result.id
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 hover:border-emerald-300'
+                    }`}
+                    onClick={() => handleSelectRequest(result)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-800">{result.referenceNumber}</p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(result.dateReceived).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-sm text-emerald-600">
+                        {result.sender}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : message.text && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-gray-500 py-4"
+              >
+                {message.text}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+
+    {/* Update Form */}
+    <AnimatePresence>
+      {selectedRequest && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="bg-white rounded-xl shadow-sm p-6"
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold text-gray-800">Update Request</h2>
+            <button
+              onClick={() => {
+                setSelectedRequest(null);
+                setFormData({
+                  dateReceived: '',
+                  referenceNumber: '',
+                  sender: '',
+                  otherSender: '',
+                  subject: '',
+                  otherSubject: '',
+                  status: 'Pending',
+                  responseDate: '',
+                  answeredBy: '',
+                  description: ''
+                });
+              }}
+              className="px-4 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
+                       rounded-lg transition-colors flex items-center space-x-2"
             >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-gray-800">{result.referenceNumber}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(result.dateReceived).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="text-sm text-emerald-600">
-                  {result.sender}
+              <RefreshCw className="h-5 w-5" />
+              <span>Clear Form</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleUpdate} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Date Received */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Date Received *
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    name="dateReceived"
+                    value={formData.dateReceived}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : message.text && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center text-gray-500 py-4"
-        >
-          {message.text}
+
+              {/* Reference Number */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Reference Number *
+                </label>
+                <input
+                  type="text"
+                  name="referenceNumber"
+                  value={formData.referenceNumber}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {/* Sender */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Sender/Sources *
+                </label>
+                <select
+                  name="sender"
+                  value={formData.sender}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="">Select Sender/Sources</option>
+                  {senderOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Subject/Topic *
+                </label>
+                <select
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="">Select Subject/Topic</option>
+                  {subjectOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Description *
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {/* Response Date */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Response Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    name="responseDate"
+                    value={formData.responseDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  {statusOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Answered By */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Answered By
+                </label>
+                <select
+                  name="answeredBy"
+                  value={formData.answeredBy}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Select Person</option>
+                  {answeredByOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <motion.button
+                type="submit"
+                disabled={isUpdating}
+                className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                          transition-colors flex items-center space-x-2 ${
+                            isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                whileHover={!isUpdating ? { scale: 1.02 } : {}}
+                whileTap={!isUpdating ? { scale: 0.98 } : {}}
+              >
+                <Save className="h-5 w-5" />
+                <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
+              </motion.button>
+            </div>
+          </form>
         </motion.div>
       )}
-    </motion.div>
-  )}
-</AnimatePresence>
-</div>
-
-<AnimatePresence>
-{selectedRequest && (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    className="bg-white rounded-xl shadow-sm p-6"
-  >
-    <h2 className="text-lg font-semibold text-gray-800 mb-4">Update Request</h2>
-    <form onSubmit={handleUpdate} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Form fields from renderStepContent() */}
-        {renderStepContent()}
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <motion.button
-          type="submit"
-          disabled={isUpdating}
-          className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-                    transition-colors flex items-center space-x-2 ${
-                      isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-          whileHover={!isUpdating ? { scale: 1.02 } : {}}
-          whileTap={!isUpdating ? { scale: 0.98 } : {}}
-        >
-          <Save className="h-5 w-5" />
-          <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
-        </motion.button>
-      </div>
-    </form>
-  </motion.div>
-)}
-</AnimatePresence>
-    </div>
-  );
+    </AnimatePresence>
+  </div>
+);
 
   const renderPendingRequests = () => (
     <div className="space-y-6">
