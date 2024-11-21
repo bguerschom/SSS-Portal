@@ -183,7 +183,7 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
 <motion.div
   initial={{ opacity: 0, y: -20 }}
   animate={{ opacity: 1, y: 0 }}
-  className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl text-black p-8 mb-8"
+  className="bg-gradient-to-r from-emerald-500 rounded-xl text-black p-8 mb-8"
 >
   <div className="max-w-4xl mx-auto">
     <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
