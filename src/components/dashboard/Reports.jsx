@@ -9,20 +9,32 @@ import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import Sidebar from '../shared/Sidebar';
 import {
-  BarChart as RechartsBarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
-  LineChart,
-  Line
-} from from 'recharts/lib/recharts';
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts/lib/recharts';
+
+// Alternative approach if above doesn't work:
+import { LineChart, Line } from 'recharts/lib/chart/LineChart';
+import { BarChart, Bar } from 'recharts/lib/chart/BarChart';
+import { PieChart, Pie } from 'recharts/lib/chart/PieChart';
+import { XAxis } from 'recharts/lib/cartesian/XAxis';
+import { YAxis } from 'recharts/lib/cartesian/YAxis';
+import { CartesianGrid } from 'recharts/lib/cartesian/CartesianGrid';
+import { Tooltip } from 'recharts/lib/component/Tooltip';
+import { Legend } from 'recharts/lib/component/Legend';
+import { ResponsiveContainer } from 'recharts/lib/component/ResponsiveContainer';
+import { Cell } from 'recharts/lib/component/Cell';
 
 const Reports = ({ onNavigate }) => {
   const [requests, setRequests] = useState([]);
