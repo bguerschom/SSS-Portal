@@ -11,6 +11,7 @@ import Sidebar from '../shared/Sidebar';
 import ChartComponents from './ChartComponents';
 
 const Reports = ({ onNavigate }) => {
+  // States
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('week');
@@ -19,19 +20,27 @@ const Reports = ({ onNavigate }) => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Constants
   const dateRanges = {
     'today': 'Today',
     'week': 'Last 7 Days',
     'month': 'Last 30 Days',
     'quarter': 'Last 3 Months',
-    'year': 'Last Year'
+    'year': 'Last Year',
+    'all': 'All Years'
   };
 
+  // Effects
   useEffect(() => {
     fetchRequests();
   }, [dateRange, selectedSender, selectedStatus]);
 
+  // Helper Functions
   const getDateFilter = () => {
+    if (dateRange === 'all') {
+      return null;
+    }
+
     const now = new Date();
     switch(dateRange) {
       case 'today':
@@ -72,6 +81,8 @@ const Reports = ({ onNavigate }) => {
       querySnapshot.forEach((doc) => {
         requestData.push({ id: doc.id, ...doc.data() });
       });
+
+      requestData.sort((a, b) => new Date(a.dateReceived) - new Date(b.dateReceived));
       setRequests(requestData);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -110,8 +121,18 @@ const Reports = ({ onNavigate }) => {
 
   const getTimelineData = () => {
     const timeline = requests.reduce((acc, request) => {
-      const date = new Date(request.dateReceived).toLocaleDateString();
-      acc[date] = (acc[date] || 0) + 1;
+      let dateKey;
+      const date = new Date(request.dateReceived);
+      
+      if (dateRange === 'all') {
+        dateKey = date.getFullYear().toString();
+      } else if (dateRange === 'year') {
+        dateKey = date.toLocaleDateString('default', { month: 'short', year: 'numeric' });
+      } else {
+        dateKey = date.toLocaleDateString();
+      }
+      
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
       return acc;
     }, {});
 
@@ -120,7 +141,12 @@ const Reports = ({ onNavigate }) => {
         date,
         requests: count
       }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => {
+        if (dateRange === 'all') {
+          return parseInt(a.date) - parseInt(b.date);
+        }
+        return new Date(a.date) - new Date(b.date);
+      });
   };
 
   const handleExport = () => {
@@ -146,7 +172,7 @@ const Reports = ({ onNavigate }) => {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   };
-
+  // Continue the Reports component
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex">
       <Sidebar activePage="reports" onNavigate={onNavigate} />
@@ -181,13 +207,16 @@ const Reports = ({ onNavigate }) => {
                 >
                   <Filter className="h-5 w-5 text-gray-500" />
                   <span>Filters</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  <ChevronDown 
+                    className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} 
+                  />
                 </motion.button>
 
                 <select
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none 
+                           focus:ring-2 focus:ring-emerald-500"
                 >
                   {Object.entries(dateRanges).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -235,7 +264,8 @@ const Reports = ({ onNavigate }) => {
                       <select
                         value={selectedSender}
                         onChange={(e) => setSelectedSender(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg 
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="all">All Senders</option>
                         <option value="NPPA">NPPA</option>
@@ -251,7 +281,8 @@ const Reports = ({ onNavigate }) => {
                       <select
                         value={selectedStatus}
                         onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg 
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="all">All Statuses</option>
                         <option value="Pending">Pending</option>
@@ -281,7 +312,8 @@ const Reports = ({ onNavigate }) => {
               },
               { 
                 title: 'Response Rate', 
-                value: `${Math.round((requests.filter(r => r.status === 'Answered').length / requests.length) * 100 || 0)}%`,
+                value: `${Math.round((requests.filter(r => r.status === 'Answered').length / 
+                        requests.length) * 100 || 0)}%`,
                 icon: TrendingUp,
                 color: 'blue'
               },
@@ -297,9 +329,10 @@ const Reports = ({ onNavigate }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`bg-white rounded-lg shadow-sm p-6 relative overflow-hidden`}
+                className="bg-white rounded-lg shadow-sm p-6"
               >
-                <div className={`w-12 h-12 rounded-lg bg-${stat.color}-50 flex items-center justify-center mb-4`}>
+                <div className={`w-12 h-12 rounded-lg bg-${stat.color}-50 flex items-center 
+                               justify-center mb-4`}>
                   <stat.icon className={`h-6 w-6 text-${stat.color}-500`} />
                 </div>
                 <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
@@ -331,7 +364,7 @@ const Reports = ({ onNavigate }) => {
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-5 w-5 text-emerald-500" />
                   <span className="text-sm text-gray-600">
-                    Average response time improved by 15% this {dateRange}
+                    Average response time improved by 15% {dateRange === 'all' ? 'overall' : `this ${dateRange}`}
                   </span>
                 </div>
               </div>
@@ -353,18 +386,23 @@ const Reports = ({ onNavigate }) => {
                 <div className="flex items-center space-x-2">
                   <Users className="h-5 w-5 text-emerald-500" />
                   <span className="text-sm text-gray-600">
-                    {getSenderData()[0]?.name || 'N/A'} ({getSenderData()[0]?.percentage || 0}% of requests)
+                    {getSenderData()[0]?.name || 'N/A'} 
+                    ({getSenderData()[0]?.percentage || 0}% of requests)
                   </span>
                 </div>
               </div>
 
-              {/* Status Distribution */}
+              {/* Historical Overview */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-700">Status Overview</h3>
+                <h3 className="text-sm font-medium text-gray-700">Historical Overview</h3>
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="h-5 w-5 text-emerald-500" />
+                  <Calendar className="h-5 w-5 text-emerald-500" />
                   <span className="text-sm text-gray-600">
-                    {getStatusData()[0]?.name || 'N/A'} is the most common status ({getStatusData()[0]?.percentage || 0}%)
+                    {dateRange === 'all' 
+                      ? `Analyzing data from ${new Date(Math.min(...requests.map(r => 
+                          new Date(r.dateReceived)))).getFullYear()} to present`
+                      : `Showing data for the selected ${dateRange} period`
+                    }
                   </span>
                 </div>
               </div>
