@@ -1173,5 +1173,7 @@ const StakeholderForm = ({ onNavigate, subItem }) => {
   </div>
 </div>
 
+  };
+
 {/* Export at the end of the file */}
 export default StakeholderForm;
