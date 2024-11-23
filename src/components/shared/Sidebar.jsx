@@ -9,7 +9,8 @@ import {
   ChevronDown,
   Key,
   Users,
-  UserPlus
+  UserPlus,
+  Shield
 } from 'lucide-react';
 
 const MenuItem = ({ icon: Icon, text, subItems, isActive, onItemClick, permissions }) => {
@@ -61,8 +62,8 @@ const MenuItem = ({ icon: Icon, text, subItems, isActive, onItemClick, permissio
   );
 };
 
-const Sidebar = ({ activePage, onNavigate }) => {
-  const menuItems = [
+const Sidebar = ({ activePage, onNavigate, userProfile }) => {
+  const menuItems = useMemo(() => [
     {
       icon: Home,
       text: 'Dashboard',
@@ -109,9 +110,14 @@ const Sidebar = ({ activePage, onNavigate }) => {
       text: 'Reports',
       path: 'reports',
       subItems: ['SHR Report', 'BCR Report', 'BR Report', 'Access Report', 'Attendance Report', 'Visitors Report']
-    }
-  ];
-
+    },
+    // Add the new conditional item here
+    ...(userProfile?.role === 'ADMINISTRATOR' ? [{
+      icon: Shield,
+      text: 'Admin Dashboard',
+      path: 'admin'
+    }] : [])
+  ], [userProfile]);
   return (
     <div className="w-64 bg-white h-full shadow-lg fixed left-0 top-0">
       {/* Logo Section */}
@@ -147,3 +153,5 @@ const Sidebar = ({ activePage, onNavigate }) => {
 };
 
 export default Sidebar;
+
+import { useAuth } from './contexts/AuthContext.js';
