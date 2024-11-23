@@ -947,31 +947,223 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
               </button>
             </div>
 
-            <form onSubmit={handleUpdate}>
-              {/* Form content - reuse the same fields from renderStepContent */}
-              {renderStepContent()}
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <motion.button
-                  type="submit"
-                  disabled={isUpdating}
-                  className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
-                            transition-colors flex items-center space-x-2 ${
-                              isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                  whileHover={!isUpdating ? { scale: 1.02 } : {}}
-                  whileTap={!isUpdating ? { scale: 0.98 } : {}}
-                >
-                  <Save className="h-5 w-5" />
-                  <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
-                </motion.button>
+                     <form onSubmit={handleUpdate} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Full Names *
+                </label>
+                <input
+                  type="text"
+                  name="fullNames"
+                  value={formData.fullNames}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
               </div>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Citizenship *
+                </label>
+                <input
+                  type="text"
+                  name="citizenship"
+                  value={formData.citizenship}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  ID/Passport Number *
+                </label>
+                <input
+                  type="text"
+                  name="idPassportNumber"
+                  value={formData.idPassportNumber}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {/* Department & Role */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Department *
+                </label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="">Select Department</option>
+                  {departmentOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Role Type *
+                </label>
+                <select
+                  name="roleType"
+                  value={formData.roleType}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  <option value="">Select Role Type</option>
+                  {roleOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status and Dates */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  {statusOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Submitted Date *
+                </label>
+                <input
+                  type="date"
+                  name="submittedDate"
+                  value={formData.submittedDate}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {formData.status === 'Closed' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Feedback Date
+                  </label>
+                  <input
+                    type="date"
+                    name="feedbackDate"
+                    value={formData.feedbackDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Requested By *
+                </label>
+                <input
+                  type="text"
+                  name="requestedBy"
+                  value={formData.requestedBy}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              {/* Conditional Fields based on Role Type */}
+              {['Contractor', 'Expert'].includes(formData.roleType) && (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      From Company *
+                    </label>
+                    <input
+                      type="text"
+                      name="fromCompany"
+                      value={formData.fromCompany}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  {formData.roleType === 'Contractor' && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Duration *
+                        </label>
+                        <input
+                          type="text"
+                          name="duration"
+                          value={formData.duration}
+                          onChange={handleChange}
+                          placeholder="e.g., 6 months"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Operating Country *
+                        </label>
+                        <input
+                          type="text"
+                          name="operatingCountry"
+                          value={formData.operatingCountry}
+                          onChange={handleChange}
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <motion.button
+                type="submit"
+                disabled={isUpdating}
+                className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                          transition-colors flex items-center space-x-2 ${
+                            isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                whileHover={!isUpdating ? { scale: 1.02 } : {}}
+                whileTap={!isUpdating ? { scale: 0.98 } : {}}
+              >
+                <Save className="h-5 w-5" />
+                <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
+              </motion.button>
+            </div>
+          </form>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+);
 
   const renderPendingRequests = () => (
     <div className="space-y-6">
