@@ -154,4 +154,4 @@ const Sidebar = ({ activePage, onNavigate, userProfile }) => {
 
 export default Sidebar;
 
-import { useAuth } from './contexts/AuthContext.js';
+import { useAuth } from '../../contexts/AuthContext';
