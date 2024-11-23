@@ -152,25 +152,28 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
     try {
       await addDoc(collection(db, 'background_checks'), {
         ...formData,
-        department: formData.department === 'Others' ? formData.otherDepartment : formData.department,
-        createdAt: new Date()
-      });
+      department: formData.department === 'Others' ? formData.otherDepartment : formData.department,
+      createdAt: new Date().toISOString(),
+      status: 'Pending', // Default status
+      updatedAt: new Date().toISOString()
+    });
 
       setMessage({
         type: 'success',
         text: 'Background check request submitted successfully!'
       });
       
-      handleReset();
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Error submitting request. Please try again.'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    handleReset();
+  } catch (error) {
+    console.error('Error submitting request:', error);
+    setMessage({
+      type: 'error',
+      text: 'Error submitting request. Please try again.'
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSearch = async () => {
     if (!searchTerm) return;
@@ -189,19 +192,25 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
       const querySnapshot = await getDocs(q);
       const results = [];
       querySnapshot.forEach((doc) => {
-        results.push({ id: doc.id, ...doc.data() });
+      results.push({ 
+        id: doc.id, 
+        ...doc.data(),
+        submittedDate: doc.data().submittedDate,
+        feedbackDate: doc.data().feedbackDate || '' 
       });
-
+    });
+      
       setSearchResults(results);
       if (results.length === 0) {
         setMessage({ type: 'info', text: 'No requests found' });
       }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Error searching requests' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error searching:', error);
+    setMessage({ type: 'error', text: 'Error searching requests' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchPendingRequests = async () => {
     setIsLoadingPending(true);
@@ -213,8 +222,13 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
       const querySnapshot = await getDocs(q);
       const requests = [];
       querySnapshot.forEach((doc) => {
-        requests.push({ id: doc.id, ...doc.data() });
+      requests.push({ 
+        id: doc.id, 
+        ...doc.data(),
+        submittedDate: doc.data().submittedDate,
+        feedbackDate: doc.data().feedbackDate || '' 
       });
+    });
       setPendingRequests(requests);
     } catch (error) {
       console.error('Error fetching pending requests:', error);
@@ -241,13 +255,14 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
       const docRef = doc(db, 'background_checks', selectedRequest.id);
       await updateDoc(docRef, {
         ...formData,
-        updatedAt: new Date()
-      });
-      
-      setMessage({ 
-        type: 'success', 
-        text: 'Background check request updated successfully!' 
-      });
+      updatedAt: new Date().toISOString(),
+      department: formData.department === 'Others' ? formData.otherDepartment : formData.department
+    });
+    
+    setMessage({ 
+      type: 'success', 
+      text: 'Background check request updated successfully!' 
+    });
 
       // Clear any existing timeout
       if (successTimeout) {
@@ -272,6 +287,9 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
           duration: '',
           operatingCountry: ''
         });
+        setMessage({ type: '', text: '' });
+        handleReset();
+        setSelectedRequest(null);
         setSearchTerm('');
         setSearchResults([]);
         setShowResults(false);
@@ -284,15 +302,16 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
         fetchPendingRequests();
       }
 
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Error updating request. Please try again.'
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error updating:', error);
+    setMessage({
+      type: 'error',
+      text: 'Error updating request. Please try again.'
+    });
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
   const handleReset = () => {
     setFormData({
