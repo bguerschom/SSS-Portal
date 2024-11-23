@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import Layout from './components/layout/Layout';
 import LoginPage from './components/auth/LoginPage';
 import WelcomePage from './components/dashboard/WelcomePage';
 import StakeHolder from './components/dashboard/StakeHolder';
@@ -8,85 +12,158 @@ import AccessRequest from './components/dashboard/AccessRequest';
 import Attendance from './components/dashboard/Attendance';
 import VisitorsManagement from './components/dashboard/VisitorsManagement';
 import Reports from './components/dashboard/Reports';
+import AdminDashboard from './components/admin/AdminDashboard';
+import NotFoundPage from './components/common/NotFoundPage';
 
-function App() {
-  // Authentication state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('welcome');
-  const [username, setUsername] = useState('');
-  const [currentSubItem, setCurrentSubItem] = useState(null);
+// Protected Route wrapper component
+const ProtectedRoute = ({ children, requiredPermission }) => {
+  const { user, loading, hasPermission } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (requiredPermission && !hasPermission(...requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
+};
 
-  // Check if user was previously logged in
-  useEffect(() => {
-    const savedLoginState = localStorage.getItem('isLoggedIn');
-    const savedUsername = localStorage.getItem('username');
-    if (savedLoginState === 'true' && savedUsername) {
-      setIsLoggedIn(true);
-      setUsername(savedUsername);
-    }
-  }, []);
+const App = () => {
+  const { user, loading } = useAuth();
 
-  const handleLoginSuccess = (user) => {
-    setUsername(user);
-    setIsLoggedIn(true);
-    // Save login state
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', user);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUsername('');
-    setCurrentPage('welcome');
-    setCurrentSubItem(null);
-    // Clear login state
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('username');
-  };
-
-  const handleNavigate = (page, subItem = null) => {
-    setCurrentPage(page);
-    setCurrentSubItem(subItem);
-  };
-
-  // If not logged in, show login page
-  if (!isLoggedIn) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  // Show loading state while auth is initializing
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
-  // Render the appropriate page based on currentPage
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'stakeholder':
-        return <StakeHolder onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'background':
-        return <BackgroundCheck onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'badge':
-        return <BadgeRequest onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'access':
-        return <AccessRequest onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'attendance':
-        return <Attendance onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'visitors':
-        return <VisitorsManagement onNavigate={handleNavigate} subItem={currentSubItem} />;
-      case 'reports':
-        return <Reports onNavigate={handleNavigate} subItem={currentSubItem} />;
-      default:
-        return (
-          <WelcomePage 
-            username={username} 
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-          />
-        );
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
-      {renderPage()}
-    </div>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route 
+            path="/login" 
+            element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
+          />
+
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <WelcomePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/stakeholder/:action"
+            element={
+              <ProtectedRoute requiredPermission={['stakeholder', 'view']}>
+                <Layout>
+                  <StakeHolder />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/background/:action"
+            element={
+              <ProtectedRoute requiredPermission={['backgroundCheck', 'view']}>
+                <Layout>
+                  <BackgroundCheck />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/badge/:action"
+            element={
+              <ProtectedRoute requiredPermission={['badgeRequest', 'view']}>
+                <Layout>
+                  <BadgeRequest />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/access/:action"
+            element={
+              <ProtectedRoute requiredPermission={['accessRequest', 'view']}>
+                <Layout>
+                  <AccessRequest />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/attendance/:action"
+            element={
+              <ProtectedRoute requiredPermission={['attendance', 'view']}>
+                <Layout>
+                  <Attendance />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/visitors/:action"
+            element={
+              <ProtectedRoute requiredPermission={['visitorsManagement', 'view']}>
+                <Layout>
+                  <VisitorsManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/:type"
+            element={
+              <ProtectedRoute requiredPermission={['reports', 'view']}>
+                <Layout>
+                  <Reports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect root to dashboard or login */}
+          <Route 
+            path="/" 
+            element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
+          />
+
+          {/* 404 page */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
-}
+};
 
 export default App;
