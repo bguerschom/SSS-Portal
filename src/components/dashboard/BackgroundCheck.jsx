@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Save, RefreshCw, AlertCircle, CheckCircle,
   ChevronRight, ChevronLeft, Search, Loader, Globe,
-  Building, Calendar, FileText
+  Building, Calendar, FileText, Clock, Filter, Download,
+  ChevronDown
 } from 'lucide-react';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -33,12 +34,13 @@ const steps = [
   }
 ];
 
+// Options
 const departmentOptions = ['Department 1', 'Department 2', 'Department 3', 'Others'];
 const roleOptions = ['Staff', 'Contractor', 'Expert', 'Apprentice'];
 const statusOptions = ['Pending', 'Closed'];
 
 const BackgroundCheck = ({ onNavigate, subItem }) => {
-  // Form state
+  // States for form data and UI
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fullNames: '',
@@ -56,7 +58,7 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
     operatingCountry: ''
   });
 
-  // UI states
+  // States for UI control
   const [errors, setErrors] = useState({});
   const [showOtherDepartment, setShowOtherDepartment] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -68,13 +70,26 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [isLoadingPending, setIsLoadingPending] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [successTimeout, setSuccessTimeout] = useState(null);
 
   useEffect(() => {
     if (subItem === 'Pending') {
       fetchPendingRequests();
     }
+    // Cleanup timeout on unmount
+    return () => {
+      if (successTimeout) {
+        clearTimeout(successTimeout);
+      }
+    };
   }, [subItem]);
 
+  // Clear form when switching sections
+  useEffect(() => {
+    handleReset();
+  }, [subItem]);
+  // Form Handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -137,8 +152,8 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
     try {
       await addDoc(collection(db, 'background_checks'), {
         ...formData,
-        createdAt: new Date(),
-        department: formData.department === 'Others' ? formData.otherDepartment : formData.department
+        department: formData.department === 'Others' ? formData.otherDepartment : formData.department,
+        createdAt: new Date()
       });
 
       setMessage({
@@ -154,6 +169,128 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchTerm) return;
+
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+    setShowResults(true);
+
+    try {
+      const q = query(
+        collection(db, 'background_checks'),
+        where('idPassportNumber', '>=', searchTerm),
+        where('idPassportNumber', '<=', searchTerm + '\uf8ff')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const results = [];
+      querySnapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+
+      setSearchResults(results);
+      if (results.length === 0) {
+        setMessage({ type: 'info', text: 'No requests found' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error searching requests' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPendingRequests = async () => {
+    setIsLoadingPending(true);
+    try {
+      const q = query(
+        collection(db, 'background_checks'),
+        where('status', '==', 'Pending')
+      );
+      const querySnapshot = await getDocs(q);
+      const requests = [];
+      querySnapshot.forEach((doc) => {
+        requests.push({ id: doc.id, ...doc.data() });
+      });
+      setPendingRequests(requests);
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+      setMessage({ type: 'error', text: 'Error loading pending requests' });
+    } finally {
+      setIsLoadingPending(false);
+    }
+  };
+
+  const handleSelectRequest = (request) => {
+    setSelectedRequest(request);
+    setFormData(request);
+    if (request.department === 'Others') {
+      setShowOtherDepartment(true);
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const docRef = doc(db, 'background_checks', selectedRequest.id);
+      await updateDoc(docRef, {
+        ...formData,
+        updatedAt: new Date()
+      });
+      
+      setMessage({ 
+        type: 'success', 
+        text: 'Background check request updated successfully!' 
+      });
+
+      // Clear any existing timeout
+      if (successTimeout) {
+        clearTimeout(successTimeout);
+      }
+
+      // Set new timeout for message and cleanup
+      const timeout = setTimeout(() => {
+        setMessage({ type: '', text: '' });
+        setFormData({
+          fullNames: '',
+          citizenship: '',
+          idPassportNumber: '',
+          department: '',
+          otherDepartment: '',
+          roleType: '',
+          submittedDate: '',
+          status: 'Pending',
+          feedbackDate: '',
+          requestedBy: '',
+          fromCompany: '',
+          duration: '',
+          operatingCountry: ''
+        });
+        setSearchTerm('');
+        setSearchResults([]);
+        setShowResults(false);
+        setSelectedRequest(null);
+      }, 5000);
+
+      setSuccessTimeout(timeout);
+      
+      if (subItem === 'Pending') {
+        fetchPendingRequests();
+      }
+
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Error updating request. Please try again.'
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -178,53 +315,7 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
     setMessage({ type: '', text: '' });
     setCurrentStep(1);
   };
-
-  const handleUpdate = async (e) => {
-  e.preventDefault();
-  setIsUpdating(true);
-  setMessage({ type: '', text: '' });
-
-  try {
-    const docRef = doc(db, 'background_checks', selectedRequest.id);
-    await updateDoc(docRef, {
-      ...formData,
-      updatedAt: new Date()
-    });
-    
-    setMessage({ type: 'success', text: 'Background check request updated successfully!' });
-    
-    // Clear form after 5 seconds
-    setTimeout(() => {
-      setSelectedRequest(null);
-      setFormData({
-        fullNames: '',
-        citizenship: '',
-        idPassportNumber: '',
-        department: '',
-        otherDepartment: '',
-        roleType: '',
-        submittedDate: '',
-        status: 'Pending',
-        feedbackDate: '',
-        requestedBy: '',
-        fromCompany: '',
-        duration: '',
-        operatingCountry: ''
-      });
-      setSearchTerm('');
-      setSearchResults([]);
-      setShowResults(false);
-      setMessage({ type: '', text: '' });
-    }, 5000);
-
-  } catch (error) {
-    setMessage({ type: 'error', text: 'Error updating request. Please try again.' });
-  } finally {
-    setIsUpdating(false);
-  }
-};
-
-
+  // Render Form Content
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -430,7 +521,6 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
       case 3:
         return (
           <div className="space-y-6">
-            {/* Common Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Submitted Date */}
               <motion.div 
@@ -461,53 +551,55 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
                 )}
               </motion.div>
 
-                      {/* Add Status */}
-        <motion.div 
-          className="space-y-2"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <label className="block text-sm font-medium text-gray-700">
-            Status *
-          </label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            required
-          >
-            {statusOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </motion.div>
+              {/* Status */}
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <label className="block text-sm font-medium text-gray-700">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                >
+                  {statusOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </motion.div>
 
-                      {/* Add Feedback Date */}
-        {formData.status === 'Closed' && (
-          <motion.div 
-            className="space-y-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <label className="block text-sm font-medium text-gray-700">
-              Feedback Date
-            </label>
-            <input
-              type="date"
-              name="feedbackDate"
-              value={formData.feedbackDate}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </motion.div>
+              {/* Feedback Date (if status is Closed) */}
+              {formData.status === 'Closed' && (
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <label className="block text-sm font-medium text-gray-700">
+                    Feedback Date
+                  </label>
+                  <input
+                    type="date"
+                    name="feedbackDate"
+                    value={formData.feedbackDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </motion.div>
+              )}
 
               {/* Requested By */}
               <motion.div 
                 className="space-y-2"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
+                transition={{ delay: 0.2 }}
               >
                 <label className="block text-sm font-medium text-gray-700">
                   Requested By *
@@ -626,89 +718,326 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
             )}
           </div>
         );
+        case 4:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Review Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Full Names</p>
+                  <p className="mt-1 text-gray-900">{formData.fullNames}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Citizenship</p>
+                  <p className="mt-1 text-gray-900">{formData.citizenship}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">ID/Passport Number</p>
+                  <p className="mt-1 text-gray-900">{formData.idPassportNumber}</p>
+                </div>
 
-case 4:
-  return (
-    <div className="space-y-6">
-      <div className="bg-gray-50 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Review Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Basic Information */}
-          <div>
-            <p className="text-sm font-medium text-gray-500">Full Names</p>
-            <p className="mt-1">{formData.fullNames}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Citizenship</p>
-            <p className="mt-1">{formData.citizenship}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">ID/Passport Number</p>
-            <p className="mt-1">{formData.idPassportNumber}</p>
-          </div>
+                {/* Department & Role */}
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Department</p>
+                  <p className="mt-1 text-gray-900">
+                    {formData.department === 'Others' ? formData.otherDepartment : formData.department}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Role Type</p>
+                  <p className="mt-1 text-gray-900">{formData.roleType}</p>
+                </div>
 
-          {/* Department & Role */}
-          <div>
-            <p className="text-sm font-medium text-gray-500">Department</p>
-            <p className="mt-1">{formData.department === 'Others' ? formData.otherDepartment : formData.department}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Role Type</p>
-            <p className="mt-1">{formData.roleType}</p>
-          </div>
+                {/* Status and Dates */}
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Status</p>
+                  <p className="mt-1 text-gray-900">{formData.status}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Submitted Date</p>
+                  <p className="mt-1 text-gray-900">{formData.submittedDate}</p>
+                </div>
+                {formData.status === 'Closed' && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Feedback Date</p>
+                    <p className="mt-1 text-gray-900">{formData.feedbackDate}</p>
+                  </div>
+                )}
 
-          {/* Status and Dates */}
-          <div>
-            <p className="text-sm font-medium text-gray-500">Status</p>
-            <p className="mt-1">{formData.status}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-500">Submitted Date</p>
-            <p className="mt-1">{formData.submittedDate}</p>
-          </div>
-          {formData.status === 'Closed' && (
-            <div>
-              <p className="text-sm font-medium text-gray-500">Feedback Date</p>
-              <p className="mt-1">{formData.feedbackDate}</p>
-            </div>
-          )}
+                {/* Requested By */}
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Requested By</p>
+                  <p className="mt-1 text-gray-900">{formData.requestedBy}</p>
+                </div>
 
-          {/* Requested By */}
-          <div>
-            <p className="text-sm font-medium text-gray-500">Requested By</p>
-            <p className="mt-1">{formData.requestedBy}</p>
-          </div>
-
-          {/* Conditional Fields */}
-          {['Contractor', 'Expert'].includes(formData.roleType) && (
-            <>
-              <div>
-                <p className="text-sm font-medium text-gray-500">From Company</p>
-                <p className="mt-1">{formData.fromCompany}</p>
+                {/* Conditional Fields */}
+                {['Contractor', 'Expert'].includes(formData.roleType) && (
+                  <>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">From Company</p>
+                      <p className="mt-1 text-gray-900">{formData.fromCompany}</p>
+                    </div>
+                    {formData.roleType === 'Contractor' && (
+                      <>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Duration</p>
+                          <p className="mt-1 text-gray-900">{formData.duration}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Operating Country</p>
+                          <p className="mt-1 text-gray-900">{formData.operatingCountry}</p>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
-              {formData.roleType === 'Contractor' && (
-                <>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Duration</p>
-                    <p className="mt-1">{formData.duration}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Operating Country</p>
-                    <p className="mt-1">{formData.operatingCountry}</p>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+            </div>
+          </div>
+        );
 
       default:
         return null;
     }
   };
+
+  const renderUpdateForm = () => (
+    <div className="space-y-6">
+      {/* Search Section */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">Search Request</h2>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setSearchResults([]);
+              setShowResults(false);
+              setSelectedRequest(null);
+              setMessage({ type: '', text: '' });
+            }}
+            className="px-4 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
+                     rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <RefreshCw className="h-5 w-5" />
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <div className="flex space-x-4">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Enter ID/Passport Number"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {loading && (
+              <motion.div 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              >
+                <Loader className="h-5 w-5 text-emerald-500" />
+              </motion.div>
+            )}
+          </div>
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                     transition-colors flex items-center space-x-2"
+          >
+            <Search className="h-5 w-5" />
+            <span>Search</span>
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {showResults && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4"
+            >
+              {searchResults.length > 0 ? (
+                <div className="space-y-2">
+                  {searchResults.map((result) => (
+                    <motion.div
+                      key={result.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        selectedRequest?.id === result.id
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-gray-200 hover:border-emerald-300'
+                      }`}
+                      onClick={() => handleSelectRequest(result)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-800">{result.fullNames}</p>
+                          <p className="text-sm text-gray-500">
+                            ID/Passport: {result.idPassportNumber}
+                          </p>
+                        </div>
+                        <div className="text-sm text-emerald-600">
+                          {result.status}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : message.text && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-gray-500 py-4"
+                >
+                  {message.text}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Update Form */}
+      <AnimatePresence>
+        {selectedRequest && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white rounded-xl shadow-sm p-6"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-semibold text-gray-800">Update Request</h2>
+              <button
+                onClick={() => {
+                  setSelectedRequest(null);
+                  handleReset();
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
+                         rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <RefreshCw className="h-5 w-5" />
+                <span>Clear Form</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate}>
+              {/* Form content - reuse the same fields from renderStepContent */}
+              {renderStepContent()}
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <motion.button
+                  type="submit"
+                  disabled={isUpdating}
+                  className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                            transition-colors flex items-center space-x-2 ${
+                              isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                  whileHover={!isUpdating ? { scale: 1.02 } : {}}
+                  whileTap={!isUpdating ? { scale: 0.98 } : {}}
+                >
+                  <Save className="h-5 w-5" />
+                  <span>{isUpdating ? 'Updating...' : 'Update Request'}</span>
+                </motion.button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
+  const renderPendingRequests = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-800">Pending Background Checks</h2>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Full Names
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ID/Passport
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Department
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Submitted Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoadingPending ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center">
+                    <Loader className="h-5 w-5 text-emerald-500 mx-auto animate-spin" />
+                  </td>
+                </tr>
+              ) : pendingRequests.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                    No pending requests found
+                  </td>
+                </tr>
+              ) : (
+                pendingRequests.map((request, index) => (
+                  <motion.tr 
+                    key={request.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="hover:bg-gray-50"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.fullNames}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {request.idPassportNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {request.department}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {request.roleType}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(request.submittedDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        {request.status}
+                      </span>
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+// Main render method
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex">
       <Sidebar activePage="background-check" onNavigate={onNavigate} />
@@ -726,7 +1055,12 @@ case 4:
             </h1>
           </div>
 
-          {!subItem || (subItem !== 'Update' && subItem !== 'Pending') && (
+          {/* Main Content */}
+          {subItem === 'Update' ? (
+            renderUpdateForm()
+          ) : subItem === 'Pending' ? (
+            renderPendingRequests()
+          ) : (
             <>
               {/* Progress Steps */}
               <div className="mb-8">
@@ -876,6 +1210,29 @@ case 4:
                   <Loader className="h-8 w-8 text-emerald-500 animate-spin" />
                   <p className="text-gray-600">Processing request...</p>
                 </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Success/Error Messages Toast */}
+          <AnimatePresence>
+            {message.text && (
+              <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50 }}
+                className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+                  message.type === 'success' ? 'bg-emerald-50' : 'bg-red-50'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className={`h-5 w-5 ${
+                    message.type === 'success' ? 'text-emerald-500' : 'text-red-500'
+                  }`} />
+                  <span className={message.type === 'success' ? 'text-emerald-700' : 'text-red-700'}>
+                    {message.text}
+                  </span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
