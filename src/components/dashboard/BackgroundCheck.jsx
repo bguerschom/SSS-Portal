@@ -35,7 +35,7 @@ const steps = [
 
 const departmentOptions = ['Department 1', 'Department 2', 'Department 3', 'Others'];
 const roleOptions = ['Staff', 'Contractor', 'Expert', 'Apprentice'];
-const statusOptions = ['Pending', 'Completed', 'Rejected'];
+const statusOptions = ['Pending', 'Closed'];
 
 const BackgroundCheck = ({ onNavigate, subItem }) => {
   // Form state
@@ -178,6 +178,51 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
     setMessage({ type: '', text: '' });
     setCurrentStep(1);
   };
+
+  const handleUpdate = async (e) => {
+  e.preventDefault();
+  setIsUpdating(true);
+  setMessage({ type: '', text: '' });
+
+  try {
+    const docRef = doc(db, 'background_checks', selectedRequest.id);
+    await updateDoc(docRef, {
+      ...formData,
+      updatedAt: new Date()
+    });
+    
+    setMessage({ type: 'success', text: 'Background check request updated successfully!' });
+    
+    // Clear form after 5 seconds
+    setTimeout(() => {
+      setSelectedRequest(null);
+      setFormData({
+        fullNames: '',
+        citizenship: '',
+        idPassportNumber: '',
+        department: '',
+        otherDepartment: '',
+        roleType: '',
+        submittedDate: '',
+        status: 'Pending',
+        feedbackDate: '',
+        requestedBy: '',
+        fromCompany: '',
+        duration: '',
+        operatingCountry: ''
+      });
+      setSearchTerm('');
+      setSearchResults([]);
+      setShowResults(false);
+      setMessage({ type: '', text: '' });
+    }, 5000);
+
+  } catch (error) {
+    setMessage({ type: 'error', text: 'Error updating request. Please try again.' });
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
 
   const renderStepContent = () => {
@@ -416,6 +461,47 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
                 )}
               </motion.div>
 
+                      {/* Add Status */}
+        <motion.div 
+          className="space-y-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <label className="block text-sm font-medium text-gray-700">
+            Status *
+          </label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            required
+          >
+            {statusOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </motion.div>
+
+                      {/* Add Feedback Date */}
+        {formData.status === 'Closed' && (
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <label className="block text-sm font-medium text-gray-700">
+              Feedback Date
+            </label>
+            <input
+              type="date"
+              name="feedbackDate"
+              value={formData.feedbackDate}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </motion.div>
+
               {/* Requested By */}
               <motion.div 
                 className="space-y-2"
@@ -541,37 +627,83 @@ const BackgroundCheck = ({ onNavigate, subItem }) => {
           </div>
         );
 
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Review Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Full Names</p>
-                  <p className="mt-1">{formData.fullNames}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Citizenship</p>
-                  <p className="mt-1">{formData.citizenship}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID/Passport Number</p>
-                  <p className="mt-1">{formData.idPassportNumber}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Department</p>
-                  <p className="mt-1">{formData.department === 'Others' ? formData.otherDepartment : formData.department}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Role Type</p>
-                  <p className="mt-1">{formData.roleType}</p>
-                </div>
-                {/* Add more review fields based on role type */}
-              </div>
-            </div>
+case 4:
+  return (
+    <div className="space-y-6">
+      <div className="bg-gray-50 rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Review Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <div>
+            <p className="text-sm font-medium text-gray-500">Full Names</p>
+            <p className="mt-1">{formData.fullNames}</p>
           </div>
-        );
+          <div>
+            <p className="text-sm font-medium text-gray-500">Citizenship</p>
+            <p className="mt-1">{formData.citizenship}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">ID/Passport Number</p>
+            <p className="mt-1">{formData.idPassportNumber}</p>
+          </div>
+
+          {/* Department & Role */}
+          <div>
+            <p className="text-sm font-medium text-gray-500">Department</p>
+            <p className="mt-1">{formData.department === 'Others' ? formData.otherDepartment : formData.department}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Role Type</p>
+            <p className="mt-1">{formData.roleType}</p>
+          </div>
+
+          {/* Status and Dates */}
+          <div>
+            <p className="text-sm font-medium text-gray-500">Status</p>
+            <p className="mt-1">{formData.status}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">Submitted Date</p>
+            <p className="mt-1">{formData.submittedDate}</p>
+          </div>
+          {formData.status === 'Closed' && (
+            <div>
+              <p className="text-sm font-medium text-gray-500">Feedback Date</p>
+              <p className="mt-1">{formData.feedbackDate}</p>
+            </div>
+          )}
+
+          {/* Requested By */}
+          <div>
+            <p className="text-sm font-medium text-gray-500">Requested By</p>
+            <p className="mt-1">{formData.requestedBy}</p>
+          </div>
+
+          {/* Conditional Fields */}
+          {['Contractor', 'Expert'].includes(formData.roleType) && (
+            <>
+              <div>
+                <p className="text-sm font-medium text-gray-500">From Company</p>
+                <p className="mt-1">{formData.fromCompany}</p>
+              </div>
+              {formData.roleType === 'Contractor' && (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Duration</p>
+                    <p className="mt-1">{formData.duration}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Operating Country</p>
+                    <p className="mt-1">{formData.operatingCountry}</p>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
       default:
         return null;
