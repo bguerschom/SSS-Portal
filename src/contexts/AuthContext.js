@@ -33,14 +33,12 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // Check if user has permission
   const hasPermission = (module, action) => {
     if (!userProfile || !userProfile.permissions) return false;
     if (userProfile.role === 'ADMINISTRATOR') return true;
     return userProfile.permissions[module]?.[action] || false;
   };
 
-  // Check if user is admin
   const isAdmin = () => userProfile?.role === 'ADMINISTRATOR';
 
   const value = {
