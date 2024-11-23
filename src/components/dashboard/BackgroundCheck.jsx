@@ -1,154 +1,755 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { UserCheck, Search, Filter, AlertCircle } from 'lucide-react';
-import PageLayout from '../shared/PageLayout';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  User, Save, RefreshCw, AlertCircle, CheckCircle,
+  ChevronRight, ChevronLeft, Search, Loader, Globe,
+  Building, Calendar, FileText
+} from 'lucide-react';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import Sidebar from '../shared/Sidebar';
+
+// Step definitions
+const steps = [
+  {
+    id: 1,
+    title: 'Basic Information',
+    description: 'Personal details'
+  },
+  {
+    id: 2,
+    title: 'Department & Role',
+    description: 'Position information'
+  },
+  {
+    id: 3,
+    title: 'Additional Details',
+    description: 'Role-specific information'
+  },
+  {
+    id: 4,
+    title: 'Review',
+    description: 'Verify information'
+  }
+];
+
+const departmentOptions = ['Department 1', 'Department 2', 'Department 3', 'Others'];
+const roleOptions = ['Staff', 'Contractor', 'Expert', 'Apprentice'];
+const statusOptions = ['Pending', 'Completed', 'Rejected'];
 
 const BackgroundCheck = ({ onNavigate, subItem }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterOpen, setFilterOpen] = useState(false);
+  // Form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    fullNames: '',
+    citizenship: '',
+    idPassportNumber: '',
+    department: '',
+    otherDepartment: '',
+    roleType: '',
+    submittedDate: '',
+    status: 'Pending',
+    feedbackDate: '',
+    requestedBy: '',
+    fromCompany: '',
+    duration: '',
+    operatingCountry: ''
+  });
 
-  const renderContent = () => {
-    switch (subItem) {
-      case 'New Request':
+  // UI states
+  const [errors, setErrors] = useState({});
+  const [showOtherDepartment, setShowOtherDepartment] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [isLoadingPending, setIsLoadingPending] = useState(false);
+
+  useEffect(() => {
+    if (subItem === 'Pending') {
+      fetchPendingRequests();
+    }
+  }, [subItem]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    if (name === 'department') {
+      setShowOtherDepartment(value === 'Others');
+    }
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateStep = (step) => {
+    const stepErrors = {};
+    
+    switch (step) {
+      case 1:
+        if (!formData.fullNames) stepErrors.fullNames = 'Full names are required';
+        if (!formData.citizenship) stepErrors.citizenship = 'Citizenship is required';
+        if (!formData.idPassportNumber) stepErrors.idPassportNumber = 'ID/Passport number is required';
+        break;
+      case 2:
+        if (!formData.department) stepErrors.department = 'Department is required';
+        if (formData.department === 'Others' && !formData.otherDepartment) {
+          stepErrors.otherDepartment = 'Please specify department';
+        }
+        if (!formData.roleType) stepErrors.roleType = 'Role type is required';
+        break;
+      case 3:
+        if (!formData.submittedDate) stepErrors.submittedDate = 'Submitted date is required';
+        if (!formData.requestedBy) stepErrors.requestedBy = 'Requester name is required';
+        
+        if (['Contractor', 'Expert'].includes(formData.roleType)) {
+          if (!formData.fromCompany) stepErrors.fromCompany = 'Company name is required';
+          if (formData.roleType === 'Contractor') {
+            if (!formData.duration) stepErrors.duration = 'Duration is required';
+            if (!formData.operatingCountry) stepErrors.operatingCountry = 'Operating country is required';
+          }
+        }
+        break;
+      default:
+        break;
+    }
+
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateStep(currentStep)) return;
+
+    if (currentStep < steps.length) {
+      setCurrentStep(prev => prev + 1);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await addDoc(collection(db, 'background_checks'), {
+        ...formData,
+        createdAt: new Date(),
+        department: formData.department === 'Others' ? formData.otherDepartment : formData.department
+      });
+
+      setMessage({
+        type: 'success',
+        text: 'Background check request submitted successfully!'
+      });
+      
+      handleReset();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Error submitting request. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setFormData({
+      fullNames: '',
+      citizenship: '',
+      idPassportNumber: '',
+      department: '',
+      otherDepartment: '',
+      roleType: '',
+      submittedDate: '',
+      status: 'Pending',
+      feedbackDate: '',
+      requestedBy: '',
+      fromCompany: '',
+      duration: '',
+      operatingCountry: ''
+    });
+    setShowOtherDepartment(false);
+    setErrors({});
+    setMessage({ type: '', text: '' });
+    setCurrentStep(1);
+  };
+
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
         return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">New Background Check Request</h2>
-            <div className="space-y-6">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 text-emerald-700">
-                  <AlertCircle className="h-5 w-5" />
-                  <p className="text-sm">Please ensure all information is accurate before submission.</p>
-                </div>
-              </div>
-              
-              {/* Placeholder for form - you can add your actual form components here */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Full Name</label>
+          <div className="space-y-6">
+            {/* Full Names */}
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <label className="block text-sm font-medium text-gray-700">
+                Full Names *
+              </label>
+              <input
+                type="text"
+                name="fullNames"
+                value={formData.fullNames}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                          ${errors.fullNames ? 'border-red-300' : 'border-gray-200'}`}
+                required
+              />
+              {errors.fullNames && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-500 mt-1"
+                >
+                  {errors.fullNames}
+                </motion.p>
+              )}
+            </motion.div>
+
+            {/* Citizenship */}
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <label className="block text-sm font-medium text-gray-700">
+                Citizenship *
+              </label>
+              <input
+                type="text"
+                name="citizenship"
+                value={formData.citizenship}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                          ${errors.citizenship ? 'border-red-300' : 'border-gray-200'}`}
+                required
+              />
+              {errors.citizenship && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-500 mt-1"
+                >
+                  {errors.citizenship}
+                </motion.p>
+              )}
+            </motion.div>
+
+            {/* ID/Passport Number */}
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <label className="block text-sm font-medium text-gray-700">
+                ID/Passport Number *
+              </label>
+              <input
+                type="text"
+                name="idPassportNumber"
+                value={formData.idPassportNumber}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                          ${errors.idPassportNumber ? 'border-red-300' : 'border-gray-200'}`}
+                required
+              />
+              {errors.idPassportNumber && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-500 mt-1"
+                >
+                  {errors.idPassportNumber}
+                </motion.p>
+              )}
+            </motion.div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            {/* Department */}
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <label className="block text-sm font-medium text-gray-700">
+                Department *
+              </label>
+              <select
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                          ${errors.department ? 'border-red-300' : 'border-gray-200'}`}
+                required
+              >
+                <option value="">Select Department</option>
+                {departmentOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              {errors.department && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-500 mt-1"
+                >
+                  {errors.department}
+                </motion.p>
+              )}
+            </motion.div>
+
+            {/* Other Department */}
+            <AnimatePresence>
+              {showOtherDepartment && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <label className="block text-sm font-medium text-gray-700">
+                    Specify Department *
+                  </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Enter full name"
+                    name="otherDepartment"
+                    value={formData.otherDepartment}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                              ${errors.otherDepartment ? 'border-red-300' : 'border-gray-200'}`}
+                    required={showOtherDepartment}
                   />
-                </div>
-                {/* Add more form fields as needed */}
-              </div>
-            </div>
+                  {errors.otherDepartment && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-sm text-red-500 mt-1"
+                    >
+                      {errors.otherDepartment}
+                    </motion.p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Role Type */}
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <label className="block text-sm font-medium text-gray-700">
+                Role/Project Type *
+              </label>
+              <select
+                name="roleType"
+                value={formData.roleType}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                          ${errors.roleType ? 'border-red-300' : 'border-gray-200'}`}
+                required
+              >
+                <option value="">Select Role Type</option>
+                {roleOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              {errors.roleType && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-sm text-red-500 mt-1"
+                >
+                  {errors.roleType}
+                </motion.p>
+              )}
+            </motion.div>
           </div>
         );
 
-      case 'Update':
+      case 3:
         return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Update Background Check Request</h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 mb-6">
-                <input
-                  type="text"
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="Enter request ID"
-                />
-                <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
-                  Find Request
-                </button>
-              </div>
-              {/* Add your update form content here */}
-            </div>
-          </div>
-        );
-
-      case 'Pending':
-        return (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search pending requests..."
-                  className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <button 
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+          <div className="space-y-6">
+            {/* Common Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Submitted Date */}
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
               >
-                <Filter className="h-5 w-5" />
-                <span>Filter</span>
-              </button>
-            </div>
-
-            {filterOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-lg shadow-sm p-4 border border-gray-100"
-              >
-                {/* Add filter options here */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Status</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                  </div>
-                  {/* Add more filter options */}
-                </div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Submitted Date *
+                </label>
+                <input
+                  type="date"
+                  name="submittedDate"
+                  value={formData.submittedDate}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                            ${errors.submittedDate ? 'border-red-300' : 'border-gray-200'}`}
+                  required
+                />
+                {errors.submittedDate && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-red-500 mt-1"
+                  >
+                    {errors.submittedDate}
+                  </motion.p>
+                )}
               </motion.div>
+
+              {/* Requested By */}
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <label className="block text-sm font-medium text-gray-700">
+                  Requested By *
+                </label>
+                <input
+                  type="text"
+                  name="requestedBy"
+                  value={formData.requestedBy}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                            ${errors.requestedBy ? 'border-red-300' : 'border-gray-200'}`}
+                  required
+                />
+                {errors.requestedBy && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-red-500 mt-1"
+                  >
+                    {errors.requestedBy}
+                  </motion.p>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Conditional Fields based on Role Type */}
+            {['Contractor', 'Expert'].includes(formData.roleType) && (
+              <AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-6"
+                >
+                  {/* Company */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      From Company *
+                    </label>
+                    <input
+                      type="text"
+                      name="fromCompany"
+                      value={formData.fromCompany}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                                ${errors.fromCompany ? 'border-red-300' : 'border-gray-200'}`}
+                      required
+                    />
+                    {errors.fromCompany && (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-sm text-red-500 mt-1"
+                      >
+                        {errors.fromCompany}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  {formData.roleType === 'Contractor' && (
+                    <>
+                      {/* Duration */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Duration *
+                        </label>
+                        <input
+                          type="text"
+                          name="duration"
+                          value={formData.duration}
+                          onChange={handleChange}
+                          placeholder="e.g., 6 months"
+                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                                    ${errors.duration ? 'border-red-300' : 'border-gray-200'}`}
+                          required
+                        />
+                        {errors.duration && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-sm text-red-500 mt-1"
+                          >
+                            {errors.duration}
+                          </motion.p>
+                        )}
+                      </div>
+
+                      {/* Operating Country */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Operating Country *
+                        </label>
+                        <input
+                          type="text"
+                          name="operatingCountry"
+                          value={formData.operatingCountry}
+                          onChange={handleChange}
+                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500
+                                    ${errors.operatingCountry ? 'border-red-300' : 'border-gray-200'}`}
+                          required
+                        />
+                        {errors.operatingCountry && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-sm text-red-500 mt-1"
+                          >
+                            {errors.operatingCountry}
+                          </motion.p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             )}
-            
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold">Pending Background Checks</h2>
-              </div>
-              <div className="p-4">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500">
-                      <th className="pb-3">Request ID</th>
-                      <th className="pb-3">Name</th>
-                      <th className="pb-3">Date</th>
-                      <th className="pb-3">Status</th>
-                      <th className="pb-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-gray-600">
-                    <tr>
-                      <td className="py-3" colSpan="5">
-                        No pending requests found
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Review Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Full Names</p>
+                  <p className="mt-1">{formData.fullNames}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Citizenship</p>
+                  <p className="mt-1">{formData.citizenship}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">ID/Passport Number</p>
+                  <p className="mt-1">{formData.idPassportNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Department</p>
+                  <p className="mt-1">{formData.department === 'Others' ? formData.otherDepartment : formData.department}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Role Type</p>
+                  <p className="mt-1">{formData.roleType}</p>
+                </div>
+                {/* Add more review fields based on role type */}
               </div>
             </div>
           </div>
         );
 
       default:
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold mb-4">Background Check Requests</h2>
-            <p className="text-gray-600">Select an action from the sidebar to get started.</p>
-          </div>
-        );
+        return null;
     }
   };
-
   return (
-    <PageLayout
-      title="Background Check Request"
-      icon={UserCheck}
-      activePage="background"
-      onNavigate={onNavigate}
-    >
-      {renderContent()}
-    </PageLayout>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex">
+      <Sidebar activePage="background-check" onNavigate={onNavigate} />
+      
+      <div className="flex-1 ml-64 p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-7xl mx-auto"
+        >
+          {/* Page Title */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {subItem ? `${subItem} Background Check Request` : 'New Background Check Request'}
+            </h1>
+          </div>
+
+          {!subItem || (subItem !== 'Update' && subItem !== 'Pending') && (
+            <>
+              {/* Progress Steps */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between max-w-3xl mx-auto">
+                  {steps.map((step, index) => (
+                    <div key={step.id} className="flex items-center">
+                      <div className={`flex flex-col items-center ${
+                        index !== steps.length - 1 ? 'w-full' : ''
+                      }`}>
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full 
+                          ${currentStep >= step.id ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'}
+                          transition-colors duration-200`}
+                        >
+                          {currentStep > step.id ? (
+                            <CheckCircle className="h-6 w-6" />
+                          ) : (
+                            <span>{step.id}</span>
+                          )}
+                        </div>
+                        <div className="mt-2 text-center">
+                          <div className="text-sm font-medium text-gray-900">{step.title}</div>
+                          <div className="text-xs text-gray-500">{step.description}</div>
+                        </div>
+                      </div>
+                      {index !== steps.length - 1 && (
+                        <div className={`w-full h-1 mx-4 ${
+                          currentStep > step.id ? 'bg-emerald-500' : 'bg-gray-200'
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm"
+              >
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {steps[currentStep - 1].title}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {steps[currentStep - 1].description}
+                  </p>
+                </div>
+
+                <div className="p-6">
+                  <form onSubmit={handleSubmit}>
+                    {renderStepContent()}
+
+                    {/* Messages */}
+                    <AnimatePresence>
+                      {message.text && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className={`p-4 rounded-lg flex items-center space-x-2 mt-6 ${
+                            message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                          }`}
+                        >
+                          <AlertCircle className="h-5 w-5" />
+                          <span>{message.text}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Form Actions */}
+                    <div className="flex justify-between mt-8">
+                      <motion.button
+                        type="button"
+                        onClick={() => currentStep > 1 && setCurrentStep(prev => prev - 1)}
+                        className={`px-6 py-2 flex items-center space-x-2 rounded-lg transition-colors ${
+                          currentStep === 1
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                        disabled={currentStep === 1}
+                        whileHover={currentStep !== 1 ? { scale: 1.02 } : {}}
+                        whileTap={currentStep !== 1 ? { scale: 0.98 } : {}}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                        <span>Previous</span>
+                      </motion.button>
+
+                      <div className="flex space-x-3">
+                        <motion.button
+                          type="button"
+                          onClick={handleReset}
+                          className="px-6 py-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 
+                                   rounded-lg transition-colors flex items-center space-x-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <RefreshCw className="h-5 w-5" />
+                          <span>Reset</span>
+                        </motion.button>
+
+                        <motion.button
+                          type="submit"
+                          disabled={loading}
+                          className={`px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 
+                                    transition-colors flex items-center space-x-2 ${
+                                      loading ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
+                          whileHover={!loading ? { scale: 1.02 } : {}}
+                          whileTap={!loading ? { scale: 0.98 } : {}}
+                        >
+                          {currentStep === steps.length ? (
+                            <>
+                              <Save className="h-5 w-5" />
+                              <span>{loading ? 'Submitting...' : 'Submit'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Next</span>
+                              <ChevronRight className="h-5 w-5" />
+                            </>
+                          )}
+                        </motion.button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            </>
+          )}
+
+          {/* Loading Overlay */}
+          <AnimatePresence>
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+              >
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.9 }}
+                  className="bg-white rounded-lg p-8 flex flex-col items-center space-y-4"
+                >
+                  <Loader className="h-8 w-8 text-emerald-500 animate-spin" />
+                  <p className="text-gray-600">Processing request...</p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 
