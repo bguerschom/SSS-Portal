@@ -13,19 +13,24 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
+      external: [],
       output: {
         manualChunks: {
-          recharts: ['recharts']
-        }
-      }
-    }
+          recharts: ['recharts'],
+           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+        },
+      },
+    },
   },
   optimizeDeps: {
     include: [
       'firebase/app', 
       'firebase/auth', 
       'firebase/firestore',
-      'recharts'
+      'recharts',
+      'react-router-dom', 'framer-motion', 'lucide-react'
     ],
     esbuildOptions: {
       target: 'es2020'
