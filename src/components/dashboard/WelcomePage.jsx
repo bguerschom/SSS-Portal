@@ -1,108 +1,84 @@
+// src/components/dashboard/WelcomePage.jsx
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LogOut, 
-  User, 
-  ChevronDown,
   FileText, 
   UserCheck, 
   BadgeCheck, 
   BarChart,
-  Clock,
-  Settings,
-  Bell,
+  ChevronDown,
   Key,
   Users,
   UserPlus,
-  Shield 
+  Shield,
+  Clock,
+  Bell,
+  Settings,
+  LogOut 
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext'; // Add this import
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: i => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.1,
-      duration: 0.5,
-      ease: "easeOut"
-    }
-  }),
-  hover: {
-    scale: 1.02,
-    transition: {
-      duration: 0.2
-    }
-  }
-};
+import { useAuth } from '../../contexts/AuthContext';
 
 const menuItems = [
   {
     icon: FileText,
     text: 'Stake Holder Request',
-    subItems: ['New Request', 'Update', 'Pending'],
     path: 'stakeholder',
-    color: 'emerald',
+    subItems: ['New Request', 'Update', 'Pending'],
     permission: 'stakeholder'
   },
   {
     icon: UserCheck,
     text: 'Background Check Request',
-    subItems: ['New Request', 'Update', 'Pending'],
     path: 'background',
-    color: 'emerald',
+    subItems: ['New Request', 'Update', 'Pending'],
     permission: 'backgroundCheck'
   },
   {
     icon: BadgeCheck,
     text: 'Badge Request',
-    subItems: ['New Request', 'Pending'],
     path: 'badge',
-    color: 'emerald',
+    subItems: ['New Request', 'Pending'],
     permission: 'badgeRequest'
   },
   {
     icon: Key,
     text: 'Access Request',
-    subItems: ['New Request', 'Update', 'Pending'],
     path: 'access',
-    color: 'emerald',
+    subItems: ['New Request', 'Update', 'Pending'],
     permission: 'accessRequest'
   },
   {
     icon: Users,
     text: 'Attendance',
-    subItems: ['New Request', 'Update', 'Pending'],
     path: 'attendance',
-    color: 'emerald',
+    subItems: ['New Request', 'Update', 'Pending'],
     permission: 'attendance'
   },
   {
     icon: UserPlus,
     text: 'Visitors Management',
-    subItems: ['New Request', 'Update', 'Pending'],
     path: 'visitors',
-    color: 'emerald',
+    subItems: ['New Request', 'Update', 'Pending'],
     permission: 'visitorsManagement'
   },
   {
     icon: BarChart,
     text: 'Reports',
-    subItems: ['SHR Report', 'BCR Report', 'BR Report', 'Access Report', 'Attendance Report', 'Visitors Report'],
     path: 'reports',
-    color: 'emerald',
+    subItems: ['SHR Report', 'BCR Report', 'BR Report', 'Access Report', 'Attendance Report', 'Visitors Report'],
     permission: 'reports'
   }
 ];
 
-const WelcomePage = ({ username, onLogout, onNavigate }) => {
-  const { userProfile, hasPermission, isAdmin } = useAuth();
+const WelcomePage = () => {
+  const navigate = useNavigate();
+  const { userProfile, hasPermission, isAdmin, logout } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [expandedCard, setExpandedCard] = useState(null);
-  const [notifications, setNotifications] = useState(0);
+  const [notifications] = useState(0);
 
-  // Update time
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -110,6 +86,23 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
 
   const handleCardClick = (index) => {
     setExpandedCard(expandedCard === index ? null : index);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const handleNavigate = (path, subItem = null) => {
+    if (subItem) {
+      navigate(`/${path}/${subItem.toLowerCase().replace(/\s+/g, '-')}`);
+    } else {
+      navigate(`/${path}`);
+    }
   };
 
   // Filter menu items based on permissions
@@ -130,14 +123,10 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
       {/* Top Navigation Bar */}
-      <div className="fixed top-0 right-0 left-0 h-16 bg-white shadow-sm z-50">
+      <div className="fixed top-0 right-0 left-0 h-16 bg-white shadow-sm z-40 pl-64">
         <div className="h-full px-6 mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <img 
-              src="/logo.png"
-              alt="Logo"
-              className="h-8 w-auto"
-            />
+            <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
           </div>
 
           <div className="flex items-center space-x-6">
@@ -187,19 +176,25 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
             {/* Divider */}
             <div className="h-6 w-px bg-gray-200" />
 
-            {/* User Profile */}
+            {/* User Profile & Logout */}
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <User className="h-5 w-5 text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-600">
+                    {userProfile?.email?.[0]?.toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-700">{username}</span>
-                  <span className="text-xs text-gray-500">{userProfile?.role || 'User'}</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {userProfile?.email}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {userProfile?.role}
+                  </span>
                 </div>
               </div>
               <button
-                onClick={onLogout}
+                onClick={handleLogout}
                 className="flex items-center space-x-1 px-3 py-2 rounded-lg text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-200"
               >
                 <LogOut className="h-4 w-4" />
@@ -216,20 +211,20 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-black p-8 mb-8"
+          className="text-center max-w-4xl mx-auto mb-12"
         >
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
-            <p className="text-black text-lg">
-              Select an option below to get started with your tasks
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Welcome back, {userProfile?.email?.split('@')[0]}!
+          </h1>
+          <p className="text-lg text-gray-600">
+            Select an option below to get started with your tasks
+          </p>
         </motion.div>
 
         {/* Menu Grid */}
         <div className="max-w-7xl mx-auto">
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             initial="hidden"
             animate="visible"
           >
@@ -240,52 +235,54 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
               return (
                 <motion.div
                   key={index}
-                  custom={index}
-                  variants={cardVariants}
-                  whileHover="hover"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: 0,
+                    transition: { delay: index * 0.1 } 
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"
                   onClick={() => handleCardClick(index)}
-                  className="bg-white rounded-xl shadow-sm overflow-hidden
-                            cursor-pointer group transition-all duration-300"
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 bg-emerald-50 rounded-lg 
-                                    group-hover:bg-emerald-100 transition-colors">
+                      <div className="p-3 bg-emerald-50 rounded-lg">
                         <item.icon className="h-6 w-6 text-emerald-600" />
                       </div>
                       <motion.div
                         animate={{ rotate: expandedCard === index ? 180 : 0 }}
-                        transition={{ duration: 0.3 }}
                       >
-                        <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-emerald-600" />
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
                       </motion.div>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.text}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      {item.text}
+                    </h3>
                     <p className="text-sm text-gray-500">
                       {availableActions.length} actions available
                     </p>
                   </div>
-                  
+
                   <AnimatePresence>
                     {expandedCard === index && (
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: 'auto' }}
                         exit={{ height: 0 }}
-                        transition={{ duration: 0.3 }}
                         className="border-t border-gray-100 bg-gray-50"
                       >
                         <div className="p-4 space-y-1">
                           {availableActions.map((subItem, subIndex) => (
                             <motion.button
                               key={subIndex}
+                              whileHover={{ x: 4 }}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onNavigate(item.path, subItem);
+                                handleNavigate(item.path, subItem);
                               }}
-                              whileHover={{ x: 4 }}
-                              className="w-full text-left text-sm px-4 py-2 rounded-lg
-                                       text-gray-600 hover:text-emerald-600
+                              className="w-full text-left px-4 py-2 rounded-lg
+                                       text-sm text-gray-600 hover:text-emerald-600
                                        hover:bg-emerald-50 transition-colors"
                             >
                               {subItem}
@@ -302,21 +299,25 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
             {/* Admin Dashboard Card - Only visible for admins */}
             {isAdmin() && (
               <motion.div
-                custom={filteredMenuItems.length}
-                variants={cardVariants}
-                whileHover="hover"
-                onClick={() => onNavigate('admin')}
-                className="bg-white rounded-xl shadow-sm overflow-hidden
-                          cursor-pointer group transition-all duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  transition: { delay: filteredMenuItems.length * 0.1 } 
+                }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => handleNavigate('admin')}
+                className="bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer"
               >
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-emerald-50 rounded-lg 
-                                  group-hover:bg-emerald-100 transition-colors">
+                    <div className="p-3 bg-emerald-50 rounded-lg">
                       <Shield className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Admin Dashboard</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    Admin Dashboard
+                  </h3>
                   <p className="text-sm text-gray-500">
                     Manage users and permissions
                   </p>
