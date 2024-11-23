@@ -1,7 +1,7 @@
 // components/layout/Layout.jsx
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Sidebar from '../Sidebar';
+import Sidebar from './Sidebar';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Layout = ({ children }) => {
