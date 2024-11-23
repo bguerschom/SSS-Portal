@@ -16,7 +16,7 @@ import {
   UserPlus,
   Shield 
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext.js'; // Add this import
+import { useAuth } from '../../contexts/AuthContext'; // Add this import
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
