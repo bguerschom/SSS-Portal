@@ -102,6 +102,13 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
     setExpandedCard(expandedCard === index ? null : index);
   };
 
+  {menuItems.map((item, index) => {
+  const allowedSubItems = item.subItems.filter(subItem => 
+    hasPermission(item.path, subItem.toLowerCase().replace(/\s+/g, ''))
+  );
+
+  if (allowedSubItems.length === 0) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
       {/* Top Navigation Bar */}
@@ -265,6 +272,7 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
       </div>
     </div>
   );
+  })
 };
 
 export default WelcomePage;
