@@ -16,8 +16,7 @@ import {
   XCircle,
   BarChart
 } from 'lucide-react';
-import { db } from '../config/firebase';
-import firebase from "../config/firebase";
+import { db } from '../config/firebase'; 
 import { 
   collection, 
   query, 
