@@ -12,8 +12,17 @@ import {
   UserPlus
 } from 'lucide-react';
 
-const MenuItem = ({ icon: Icon, text, subItems, isActive, onItemClick }) => {
+const MenuItem = ({ icon: Icon, text, subItems, isActive, onItemClick, permissions }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { hasPermission } = useAuth();
+
+    // Filter subItems based on permissions
+  const allowedSubItems = subItems?.filter(item => {
+    const action = item.toLowerCase().replace(/\s+/g, '');
+    return hasPermission(text.toLowerCase().replace(/\s+/g, ''), action);
+  });
+
+  if (allowedSubItems?.length === 0) return null;
 
   return (
     <div className="mb-1">
