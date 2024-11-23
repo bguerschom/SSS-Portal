@@ -14,6 +14,7 @@ import VisitorsManagement from './components/dashboard/VisitorsManagement';
 import Reports from './components/dashboard/Reports';
 import AdminDashboard from './components/admin/AdminDashboard';
 import NotFoundPage from './components/common/NotFoundPage';
+import Layout from './components/layout/Layout';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredPermission }) => {
