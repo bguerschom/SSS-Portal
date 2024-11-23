@@ -13,8 +13,10 @@ import {
   Bell,
   Key,
   Users,
-  UserPlus
+  UserPlus,
+  Shield 
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext'; // Add this import
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -41,53 +43,61 @@ const menuItems = [
     text: 'Stake Holder Request',
     subItems: ['New Request', 'Update', 'Pending'],
     path: 'stakeholder',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'stakeholder'
   },
   {
     icon: UserCheck,
     text: 'Background Check Request',
     subItems: ['New Request', 'Update', 'Pending'],
     path: 'background',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'backgroundCheck'
   },
   {
     icon: BadgeCheck,
     text: 'Badge Request',
     subItems: ['New Request', 'Pending'],
     path: 'badge',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'badgeRequest'
   },
   {
     icon: Key,
     text: 'Access Request',
     subItems: ['New Request', 'Update', 'Pending'],
     path: 'access',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'accessRequest'
   },
   {
     icon: Users,
     text: 'Attendance',
     subItems: ['New Request', 'Update', 'Pending'],
     path: 'attendance',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'attendance'
   },
   {
     icon: UserPlus,
     text: 'Visitors Management',
     subItems: ['New Request', 'Update', 'Pending'],
     path: 'visitors',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'visitorsManagement'
   },
   {
     icon: BarChart,
     text: 'Reports',
     subItems: ['SHR Report', 'BCR Report', 'BR Report', 'Access Report', 'Attendance Report', 'Visitors Report'],
     path: 'reports',
-    color: 'emerald'
+    color: 'emerald',
+    permission: 'reports'
   }
 ];
 
 const WelcomePage = ({ username, onLogout, onNavigate }) => {
+  const { userProfile, hasPermission, isAdmin } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [expandedCard, setExpandedCard] = useState(null);
   const [notifications, setNotifications] = useState(0);
@@ -102,12 +112,20 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
     setExpandedCard(expandedCard === index ? null : index);
   };
 
-  {menuItems.map((item, index) => {
-  const allowedSubItems = item.subItems.filter(subItem => 
-    hasPermission(item.path, subItem.toLowerCase().replace(/\s+/g, ''))
-  );
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => {
+    if (isAdmin()) return true;
+    return item.subItems.some(subItem => 
+      hasPermission(item.permission, subItem.toLowerCase().replace(/\s+/g, ''))
+    );
+  });
 
-  if (allowedSubItems.length === 0) return null;
+  const getAvailableActions = (item) => {
+    if (isAdmin()) return item.subItems;
+    return item.subItems.filter(subItem => 
+      hasPermission(item.permission, subItem.toLowerCase().replace(/\s+/g, ''))
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
@@ -123,6 +141,14 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
           </div>
 
           <div className="flex items-center space-x-6">
+            {/* Admin Badge */}
+            {isAdmin() && (
+              <div className="px-3 py-1 bg-emerald-100 rounded-full flex items-center space-x-1">
+                <Shield className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-medium text-emerald-600">Admin</span>
+              </div>
+            )}
+
             {/* Time Display */}
             <div className="flex items-center space-x-2 bg-gray-50 px-4 py-2 rounded-lg">
               <Clock className="h-4 w-4 text-emerald-600" />
@@ -169,7 +195,7 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-gray-700">{username}</span>
-                  <span className="text-xs text-gray-500">Administrator</span>
+                  <span className="text-xs text-gray-500">{userProfile?.role || 'User'}</span>
                 </div>
               </div>
               <button
@@ -186,19 +212,19 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
 
       {/* Main Content */}
       <div className="pt-24 px-6 pb-8">
-{/* Welcome Banner */}
-<motion.div
-  initial={{ opacity: 0, y: -20 }}
-  animate={{ opacity: 1, y: 0 }}
-  className=" text-black p-8 mb-8"
->
-  <div className="max-w-4xl mx-auto">
-    <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
-    <p className="text-black text-lg">
-      Select an option below to get started with your tasks
-    </p>
-  </div>
-</motion.div>
+        {/* Welcome Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-black p-8 mb-8"
+        >
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
+            <p className="text-black text-lg">
+              Select an option below to get started with your tasks
+            </p>
+          </div>
+        </motion.div>
 
         {/* Menu Grid */}
         <div className="max-w-7xl mx-auto">
@@ -207,13 +233,79 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
             initial="hidden"
             animate="visible"
           >
-            {menuItems.map((item, index) => (
+            {filteredMenuItems.map((item, index) => {
+              const availableActions = getAvailableActions(item);
+              if (availableActions.length === 0) return null;
+
+              return (
+                <motion.div
+                  key={index}
+                  custom={index}
+                  variants={cardVariants}
+                  whileHover="hover"
+                  onClick={() => handleCardClick(index)}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden
+                            cursor-pointer group transition-all duration-300"
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 bg-emerald-50 rounded-lg 
+                                    group-hover:bg-emerald-100 transition-colors">
+                        <item.icon className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <motion.div
+                        animate={{ rotate: expandedCard === index ? 180 : 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-emerald-600" />
+                      </motion.div>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.text}</h3>
+                    <p className="text-sm text-gray-500">
+                      {availableActions.length} actions available
+                    </p>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {expandedCard === index && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="border-t border-gray-100 bg-gray-50"
+                      >
+                        <div className="p-4 space-y-1">
+                          {availableActions.map((subItem, subIndex) => (
+                            <motion.button
+                              key={subIndex}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onNavigate(item.path, subItem);
+                              }}
+                              whileHover={{ x: 4 }}
+                              className="w-full text-left text-sm px-4 py-2 rounded-lg
+                                       text-gray-600 hover:text-emerald-600
+                                       hover:bg-emerald-50 transition-colors"
+                            >
+                              {subItem}
+                            </motion.button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+
+            {/* Admin Dashboard Card - Only visible for admins */}
+            {isAdmin() && (
               <motion.div
-                key={index}
-                custom={index}
+                custom={filteredMenuItems.length}
                 variants={cardVariants}
                 whileHover="hover"
-                onClick={() => handleCardClick(index)}
+                onClick={() => onNavigate('admin')}
                 className="bg-white rounded-xl shadow-sm overflow-hidden
                           cursor-pointer group transition-all duration-300"
               >
@@ -221,58 +313,21 @@ const WelcomePage = ({ username, onLogout, onNavigate }) => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="p-3 bg-emerald-50 rounded-lg 
                                   group-hover:bg-emerald-100 transition-colors">
-                      <item.icon className="h-6 w-6 text-emerald-600" />
+                      <Shield className="h-6 w-6 text-emerald-600" />
                     </div>
-                    <motion.div
-                      animate={{ rotate: expandedCard === index ? 180 : 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ChevronDown className="h-5 w-5 text-gray-400 group-hover:text-emerald-600" />
-                    </motion.div>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">{item.text}</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Admin Dashboard</h3>
                   <p className="text-sm text-gray-500">
-                    {item.subItems.length} actions available
+                    Manage users and permissions
                   </p>
                 </div>
-                
-                <AnimatePresence>
-                  {expandedCard === index && (
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: 'auto' }}
-                      exit={{ height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="border-t border-gray-100 bg-gray-50"
-                    >
-                      <div className="p-4 space-y-1">
-                        {item.subItems.map((subItem, subIndex) => (
-                          <motion.button
-                            key={subIndex}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigate(item.path, subItem);
-                            }}
-                            whileHover={{ x: 4 }}
-                            className="w-full text-left text-sm px-4 py-2 rounded-lg
-                                     text-gray-600 hover:text-emerald-600
-                                     hover:bg-emerald-50 transition-colors"
-                          >
-                            {subItem}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
-            ))}
+            )}
           </motion.div>
         </div>
       </div>
     </div>
   );
-  })
 };
 
 export default WelcomePage;
