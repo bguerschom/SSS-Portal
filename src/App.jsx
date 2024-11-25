@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Layout from './components/layout/Layout';
+import LoadingScreen from './components/common/LoadingScreen';
 import LoginPage from './components/auth/LoginPage';
 import WelcomePage from './components/dashboard/WelcomePage';
 import StakeHolder from './components/dashboard/StakeHolder';
@@ -15,22 +17,42 @@ import Reports from './components/dashboard/Reports';
 import AdminDashboard from './components/admin/AdminDashboard';
 import NotFoundPage from './components/common/NotFoundPage';
 
-function App() {
-
-// Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredPermission }) => {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading, hasPermission, isFirstTimeUser } = useAuth();
+  const location = useLocation();
   
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingScreen />;
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // First-time users can only access dashboard
+  if (isFirstTimeUser() && location.pathname !== '/dashboard') {
+    return <Navigate to="/dashboard" replace />;
   }
   
   if (requiredPermission && !hasPermission(...requiredPermission)) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have permission to access this page. Please contact your administrator.
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
   }
   
   return children;
@@ -39,9 +61,8 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
 const App = () => {
   const { user, loading } = useAuth();
 
-  // Show loading state while auth is initializing
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingScreen />;
   }
 
   return (
@@ -77,102 +98,27 @@ const App = () => {
             }
           />
 
-          <Route
-            path="/background/:action"
-            element={
-              <ProtectedRoute requiredPermission={['backgroundCheck', 'view']}>
-                <Layout>
-                  <BackgroundCheck />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
+          {/* Add your other protected routes here */}
 
-          <Route
-            path="/badge/:action"
-            element={
-              <ProtectedRoute requiredPermission={['badgeRequest', 'view']}>
-                <Layout>
-                  <BadgeRequest />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/access/:action"
-            element={
-              <ProtectedRoute requiredPermission={['accessRequest', 'view']}>
-                <Layout>
-                  <AccessRequest />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/attendance/:action"
-            element={
-              <ProtectedRoute requiredPermission={['attendance', 'view']}>
-                <Layout>
-                  <Attendance />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/visitors/:action"
-            element={
-              <ProtectedRoute requiredPermission={['visitorsManagement', 'view']}>
-                <Layout>
-                  <VisitorsManagement />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/reports/:type"
-            element={
-              <ProtectedRoute requiredPermission={['reports', 'view']}>
-                <Layout>
-                  <Reports />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <AdminDashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Redirect root to dashboard or login */}
+          {/* Root redirect */}
           <Route 
             path="/" 
             element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
           />
 
           {/* 404 page */}
-          <Route path="*" element={<NotFoundPage />} />
+          <Route 
+            path="*" 
+            element={
+              <Layout>
+                <NotFoundPage />
+              </Layout>
+            } 
+          />
         </Routes>
       </Router>
     </ErrorBoundary>
   );
 };
-
-    return (
-    <Layout>
-      {renderPage()}
-    </Layout>
-  );
-}
 
 export default App;
