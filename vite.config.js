@@ -4,42 +4,39 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    }
+    },
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    manifest: true, // Add this line
     rollupOptions: {
+      external: [],
       output: {
         manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'ui': ['framer-motion', 'lucide-react'],
-          'charts': ['recharts']
-        }
-      }
-    }
+          recharts: ['recharts'],
+           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+        },
+      },
+    },
   },
-    server: {
-    port: 3000,
-    host: true,
-    strictPort: true
-  }
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
-      'recharts',
-      'firebase/app',
-      'firebase/auth',
+      'firebase/app', 
+      'firebase/auth', 
       'firebase/firestore',
-      'framer-motion',
-      'lucide-react'
-    ]
+      'recharts',
+      'react-router-dom', 'framer-motion', 'lucide-react'
+    ],
+    esbuildOptions: {
+      target: 'es2020'
+    }
+  },
+  server: {
+    host: true
   }
 })
