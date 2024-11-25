@@ -1,52 +1,49 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { User, Lock } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Lock, AlertCircle } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { auth, db } from '../../config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
+
+  // Handle session expired message
+  useEffect(() => {
+    if (location.state?.message) {
+      setError(location.state.message);
+      // Clear the message after showing it
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!username || !password) {
+      setError('Please enter both username and password');
+      return;
+    }
+
     setError('');
     setIsLoading(true);
 
     try {
-      // Convert username to email format if needed
       const email = username.includes('@') ? username : `${username}@yourdomain.com`;
+      await signIn(email, password);
       
-      // Attempt to sign in
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Get user profile from Firestore
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        throw new Error('User profile not found');
-      }
-
-      const userData = userDoc.data();
-      
-      // Check if user is active
-      if (userData.status !== 'active') {
-        throw new Error('Account is inactive. Please contact administrator.');
-      }
-
-      // Navigate based on role
-      if (userData.role === 'ADMINISTRATOR') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Auth context will automatically redirect to dashboard if login is successful
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message || 'Invalid username or password');
@@ -78,17 +75,21 @@ const LoginPage = () => {
               />
             </motion.div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-50 text-red-500 p-3 rounded-lg text-sm"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-red-50 text-red-500 p-4 rounded-lg mb-6 flex items-center"
                 >
-                  {error}
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  <span>{error}</span>
                 </motion.div>
               )}
+            </AnimatePresence>
 
+            <form onSubmit={handleSubmit} className="space-y-6">
               <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -156,7 +157,7 @@ const LoginPage = () => {
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
-                    <LoadingSpinner size="small" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     <span className="ml-2">Signing in...</span>
                   </div>
                 ) : (
