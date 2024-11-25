@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Lock, AlertCircle } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { auth, db } from '../../config/firebase';
 import LoadingSpinner from '../common/LoadingSpinner';
