@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Layout from './components/layout/Layout';
-import LoadingScreen from './components/common/LoadingScreen';
 import LoginPage from './components/auth/LoginPage';
 import WelcomePage from './components/dashboard/WelcomePage';
 import StakeHolder from './components/dashboard/StakeHolder';
@@ -17,12 +15,20 @@ import Reports from './components/dashboard/Reports';
 import AdminDashboard from './components/admin/AdminDashboard';
 import NotFoundPage from './components/common/NotFoundPage';
 
+// Simple loading component if you don't want to create a separate file
+const Loading = () => (
+  <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+  </div>
+);
+
+// Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredPermission }) => {
   const { user, loading, hasPermission, isFirstTimeUser } = useAuth();
   const location = useLocation();
   
   if (loading) {
-    return <LoadingScreen />;
+    return <Loading />;
   }
   
   if (!user) {
@@ -62,7 +68,7 @@ const App = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <LoadingScreen />;
+    return <Loading />;
   }
 
   return (
@@ -98,9 +104,84 @@ const App = () => {
             }
           />
 
-          {/* Add your other protected routes here */}
+          <Route
+            path="/background/:action"
+            element={
+              <ProtectedRoute requiredPermission={['backgroundCheck', 'view']}>
+                <Layout>
+                  <BackgroundCheck />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Root redirect */}
+          <Route
+            path="/badge/:action"
+            element={
+              <ProtectedRoute requiredPermission={['badgeRequest', 'view']}>
+                <Layout>
+                  <BadgeRequest />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/access/:action"
+            element={
+              <ProtectedRoute requiredPermission={['accessRequest', 'view']}>
+                <Layout>
+                  <AccessRequest />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/attendance/:action"
+            element={
+              <ProtectedRoute requiredPermission={['attendance', 'view']}>
+                <Layout>
+                  <Attendance />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/visitors/:action"
+            element={
+              <ProtectedRoute requiredPermission={['visitorsManagement', 'view']}>
+                <Layout>
+                  <VisitorsManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports/:type"
+            element={
+              <ProtectedRoute requiredPermission={['reports', 'view']}>
+                <Layout>
+                  <Reports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredPermission={['admin', 'view']}>
+                <Layout>
+                  <AdminDashboard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect root to dashboard or login */}
           <Route 
             path="/" 
             element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
