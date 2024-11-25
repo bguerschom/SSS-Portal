@@ -1,6 +1,5 @@
 // components/layout/Layout.jsx
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from "../shared/Sidebar";
 import { useAuth } from '../../contexts/AuthContext';
 
