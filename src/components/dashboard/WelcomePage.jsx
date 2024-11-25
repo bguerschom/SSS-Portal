@@ -16,7 +16,34 @@ import {
   UserPlus,
   Shield 
 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext'; // Add this import
+import { useAuth } from '../../contexts/AuthContext'; 
+
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+
+const data = [
+  { name: 'Jan', value: 100 },
+  { name: 'Feb', value: 80 },
+  { name: 'Mar', value: 90 },
+  { name: 'Apr', value: 75 },
+  { name: 'May', value: 85 },
+  { name: 'Jun', value: 95 },
+];
+
+const ActivityChart = () => {
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">User Activity</h3>
+      <LineChart width={600} height={400} data={data}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <CartesianGrid strokeDasharray="3 3" />
+        <Tooltip />
+        <Legend />
+        <Line type="monotone" dataKey="value" stroke="#8884d8" />
+      </LineChart>
+    </div>
+  );
+};
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
