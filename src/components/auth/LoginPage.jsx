@@ -6,7 +6,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { auth, db } from '../../config/firebase';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
