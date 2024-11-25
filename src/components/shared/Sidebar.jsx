@@ -1,7 +1,6 @@
 // src/components/layout/Sidebar.jsx
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Home,
