@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Layout from './components/layout/Layout';
@@ -15,44 +15,78 @@ import Reports from './components/dashboard/Reports';
 import AdminDashboard from './components/admin/AdminDashboard';
 import NotFoundPage from './components/common/NotFoundPage';
 
-// Loading component
+// Session timeout duration (5 minutes)
+const SESSION_TIMEOUT = 5 * 60 * 1000;
+
+// Loading Screen Component
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
   </div>
 );
 
-// Protected Route wrapper component
+// Session Handler Component
+const SessionHandler = ({ children }) => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    let timeoutId;
+    
+    const resetTimer = () => {
+      if (user) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          await signOut();
+          navigate('/login', { 
+            replace: true,
+            state: { message: 'Session expired. Please login again.' }
+          });
+        }, SESSION_TIMEOUT);
+      }
+    };
+
+    // Events to monitor for user activity
+    const events = [
+      'mousedown',
+      'mousemove',
+      'keypress',
+      'scroll',
+      'touchstart'
+    ];
+
+    // Add event listeners
+    events.forEach(event => {
+      document.addEventListener(event, resetTimer);
+    });
+
+    // Initial timer
+    resetTimer();
+
+    // Cleanup
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => {
+        document.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user, signOut, navigate]);
+
+  return children;
+};
+
+// Protected Route Component
 const ProtectedRoute = ({ children, requiredPermission }) => {
-  const { user, loading, hasPermission, isFirstTimeUser } = useAuth();
-  const location = useLocation();
+  const { user, loading, hasPermission } = useAuth();
   
   if (loading) {
     return <LoadingScreen />;
   }
   
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // First-time users can only access welcome page
-  if (isFirstTimeUser()) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome to SSS Portal</h2>
-            <p className="text-gray-600 mb-6">
-              Your account has been created successfully. Please wait while an administrator assigns your permissions.
-              You will be able to access your designated features once they have been configured.
-            </p>
-          </div>
-        </div>
-      </Layout>
-    );
+    return <Navigate to="/login" replace />;
   }
   
-  // Check specific permissions if required
   if (requiredPermission && !hasPermission(...requiredPermission)) {
     return (
       <Layout>
@@ -87,67 +121,130 @@ const App = () => {
   return (
     <ErrorBoundary>
       <Router>
-        <Routes>
-          {/* Public route - Login */}
-          <Route 
-            path="/login" 
-            element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
-          />
+        <SessionHandler>
+          <Routes>
+            {/* Public routes */}
+            <Route 
+              path="/" 
+              element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
+            />
+            
+            <Route 
+              path="/login" 
+              element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
+            />
 
-          {/* Default redirect */}
-          <Route 
-            path="/" 
-            element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
-          />
+            {/* Protected routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <WelcomePage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
+            <Route
+              path="/stakeholder/:action"
+              element={
+                <ProtectedRoute requiredPermission={['stakeholder', 'view']}>
+                  <Layout>
+                    <StakeHolder />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/background/:action"
+              element={
+                <ProtectedRoute requiredPermission={['backgroundCheck', 'view']}>
+                  <Layout>
+                    <BackgroundCheck />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/badge/:action"
+              element={
+                <ProtectedRoute requiredPermission={['badgeRequest', 'view']}>
+                  <Layout>
+                    <BadgeRequest />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/access/:action"
+              element={
+                <ProtectedRoute requiredPermission={['accessRequest', 'view']}>
+                  <Layout>
+                    <AccessRequest />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/attendance/:action"
+              element={
+                <ProtectedRoute requiredPermission={['attendance', 'view']}>
+                  <Layout>
+                    <Attendance />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/visitors/:action"
+              element={
+                <ProtectedRoute requiredPermission={['visitorsManagement', 'view']}>
+                  <Layout>
+                    <VisitorsManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/reports/:type"
+              element={
+                <ProtectedRoute requiredPermission={['reports', 'view']}>
+                  <Layout>
+                    <Reports />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredPermission={['admin', 'view']}>
+                  <Layout>
+                    <AdminDashboard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 page */}
+            <Route 
+              path="*" 
+              element={
                 <Layout>
-                  <WelcomePage />
+                  <NotFoundPage />
                 </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Admin route */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requiredPermission={['admin', 'view']}>
-                <Layout>
-                  <AdminDashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Module routes */}
-          <Route
-            path="/stakeholder/:action"
-            element={
-              <ProtectedRoute requiredPermission={['stakeholder', 'view']}>
-                <Layout>
-                  <StakeHolder />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Add other module routes similarly */}
-
-          {/* 404 page */}
-          <Route 
-            path="*" 
-            element={
-              <Layout>
-                <NotFoundPage />
-              </Layout>
-            } 
-          />
-        </Routes>
+              } 
+            />
+          </Routes>
+        </SessionHandler>
       </Router>
     </ErrorBoundary>
   );
