@@ -7,24 +7,29 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
+    }
   },
   build: {
     outDir: 'dist',
     rollupOptions: {
+      external: ['recharts'],
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom', 'recharts'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          ui: ['framer-motion', 'lucide-react']
+        globals: {
+          recharts: 'Recharts'
         }
       }
     }
   },
   optimizeDeps: {
-    include: ['recharts']
-  },
-  server: {
-    host: true
+    include: [
+      'react',
+      'react-dom',
+      'recharts',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore',
+      'framer-motion',
+      'lucide-react'
+    ]
   }
 })
