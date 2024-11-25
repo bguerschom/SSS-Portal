@@ -15,45 +15,58 @@ import {
   Cell
 } from 'recharts';
 
-const Charts = ({ timelineData, statusData, senderData }) => {
+const Charts = ({ timelineData = [], statusData = [], senderData = [] }) => {
   const COLORS = ['#059669', '#10B981', '#34D399', '#6EE7B7'];
 
-  // Custom tooltip formatter for timeline chart
-  const timelineTooltip = ({ active, payload, label }) => {
+  // Default data if none provided
+  const defaultTimelineData = [
+    { date: 'No Data', requests: 0 }
+  ];
+
+  const defaultStatusData = [
+    { name: 'No Data', value: 0, percentage: 100 }
+  ];
+
+  const defaultSenderData = [
+    { name: 'No Data', requests: 0 }
+  ];
+
+  // Custom tooltips
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
-          <p className="text-sm font-medium text-gray-900">{label}</p>
-          <p className="text-sm text-emerald-600">
-            Requests: {payload[0].value}
-          </p>
+        <div className="bg-white p-2 border border-gray-200 rounded shadow-sm">
+          <p className="text-sm text-gray-600">{`${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="text-sm font-semibold" style={{ color: entry.color }}>
+              {`${entry.name}: ${entry.value}`}
+            </p>
+          ))}
         </div>
       );
     }
     return null;
   };
 
-  // Custom tooltip formatter for pie chart
-  const pieTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-sm">
-          <p className="text-sm font-medium text-gray-900">{payload[0].name}</p>
-          <p className="text-sm text-emerald-600">
-            Count: {payload[0].value}
-          </p>
-          <p className="text-sm text-gray-500">
-            Percentage: {payload[0].payload.percentage}%
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Pie chart custom label
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-  // Custom label formatter for pie chart
-  const renderPieLabel = ({ name, value, percentage }) => {
-    return percentage > 5 ? `${name} (${percentage}%)` : '';
+    return percent > 0.05 ? (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="text-xs"
+      >
+        {`${name} ${(percent * 100).toFixed(0)}%`}
+      </text>
+    ) : null;
   };
 
   return (
@@ -63,7 +76,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Request Timeline</h2>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={timelineData}>
+            <LineChart data={timelineData.length ? timelineData : defaultTimelineData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <XAxis 
                 dataKey="date" 
@@ -75,7 +88,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
                 tickLine={{ stroke: '#E5E7EB' }}
                 axisLine={{ stroke: '#E5E7EB' }}
               />
-              <Tooltip content={timelineTooltip} />
+              <Tooltip content={<CustomTooltip />} />
               <Legend 
                 wrapperStyle={{ 
                   paddingTop: '20px',
@@ -89,7 +102,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
                 strokeWidth={2}
                 dot={{ fill: '#059669', stroke: '#059669', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
-                name="Number of Requests"
+                name="Requests"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -103,18 +116,18 @@ const Charts = ({ timelineData, statusData, senderData }) => {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={statusData}
+                data={statusData.length ? statusData : defaultStatusData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={renderPieLabel}
+                label={renderCustomizedLabel}
                 outerRadius={120}
                 innerRadius={60}
                 fill="#8884d8"
                 dataKey="value"
                 paddingAngle={2}
               >
-                {statusData.map((entry, index) => (
+                {(statusData.length ? statusData : defaultStatusData).map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={COLORS[index % COLORS.length]}
@@ -123,7 +136,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
                   />
                 ))}
               </Pie>
-              <Tooltip content={pieTooltip} />
+              <Tooltip content={<CustomTooltip />} />
               <Legend
                 layout="vertical"
                 align="right"
@@ -144,7 +157,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
-              data={senderData}
+              data={senderData.length ? senderData : defaultSenderData}
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -158,14 +171,7 @@ const Charts = ({ timelineData, statusData, senderData }) => {
                 tickLine={{ stroke: '#E5E7EB' }}
                 axisLine={{ stroke: '#E5E7EB' }}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Legend
                 wrapperStyle={{
                   paddingTop: '20px',
