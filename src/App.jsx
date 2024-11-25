@@ -15,8 +15,8 @@ import Reports from './components/dashboard/Reports';
 import AdminDashboard from './components/admin/AdminDashboard';
 import NotFoundPage from './components/common/NotFoundPage';
 
-// Simple loading component if you don't want to create a separate file
-const Loading = () => (
+// Loading component
+const LoadingScreen = () => (
   <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
   </div>
@@ -28,18 +28,31 @@ const ProtectedRoute = ({ children, requiredPermission }) => {
   const location = useLocation();
   
   if (loading) {
-    return <Loading />;
+    return <LoadingScreen />;
   }
   
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // First-time users can only access dashboard
-  if (isFirstTimeUser() && location.pathname !== '/dashboard') {
-    return <Navigate to="/dashboard" replace />;
+  // First-time users can only access welcome page
+  if (isFirstTimeUser()) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-white flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Welcome to SSS Portal</h2>
+            <p className="text-gray-600 mb-6">
+              Your account has been created successfully. Please wait while an administrator assigns your permissions.
+              You will be able to access your designated features once they have been configured.
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
   
+  // Check specific permissions if required
   if (requiredPermission && !hasPermission(...requiredPermission)) {
     return (
       <Layout>
@@ -68,17 +81,23 @@ const App = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <Loading />;
+    return <LoadingScreen />;
   }
 
   return (
     <ErrorBoundary>
       <Router>
         <Routes>
-          {/* Public routes */}
+          {/* Public route - Login */}
           <Route 
             path="/login" 
             element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
+          />
+
+          {/* Default redirect */}
+          <Route 
+            path="/" 
+            element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
           />
 
           {/* Protected routes */}
@@ -93,83 +112,7 @@ const App = () => {
             }
           />
 
-          <Route
-            path="/stakeholder/:action"
-            element={
-              <ProtectedRoute requiredPermission={['stakeholder', 'view']}>
-                <Layout>
-                  <StakeHolder />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/background/:action"
-            element={
-              <ProtectedRoute requiredPermission={['backgroundCheck', 'view']}>
-                <Layout>
-                  <BackgroundCheck />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/badge/:action"
-            element={
-              <ProtectedRoute requiredPermission={['badgeRequest', 'view']}>
-                <Layout>
-                  <BadgeRequest />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/access/:action"
-            element={
-              <ProtectedRoute requiredPermission={['accessRequest', 'view']}>
-                <Layout>
-                  <AccessRequest />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/attendance/:action"
-            element={
-              <ProtectedRoute requiredPermission={['attendance', 'view']}>
-                <Layout>
-                  <Attendance />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/visitors/:action"
-            element={
-              <ProtectedRoute requiredPermission={['visitorsManagement', 'view']}>
-                <Layout>
-                  <VisitorsManagement />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/reports/:type"
-            element={
-              <ProtectedRoute requiredPermission={['reports', 'view']}>
-                <Layout>
-                  <Reports />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
+          {/* Admin route */}
           <Route
             path="/admin"
             element={
@@ -181,11 +124,19 @@ const App = () => {
             }
           />
 
-          {/* Redirect root to dashboard or login */}
-          <Route 
-            path="/" 
-            element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
+          {/* Module routes */}
+          <Route
+            path="/stakeholder/:action"
+            element={
+              <ProtectedRoute requiredPermission={['stakeholder', 'view']}>
+                <Layout>
+                  <StakeHolder />
+                </Layout>
+              </ProtectedRoute>
+            }
           />
+
+          {/* Add other module routes similarly */}
 
           {/* 404 page */}
           <Route 
