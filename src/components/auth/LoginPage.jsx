@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Lock } from 'lucide-react';
-import { auth } from '../../config/firebase';
+import { auth, db } from '../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import LoadingSpinner from './LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
-const LoginPage = ({ onLoginSuccess }) => {
+const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,8 +22,47 @@ const LoginPage = ({ onLoginSuccess }) => {
     try {
       // Convert username to email format if needed
       const email = username.includes('@') ? username : `${username}@yourdomain.com`;
+      
+      // Attempt to sign in
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      onLoginSuccess(username);
+      const user = userCredential.user;
+
+      // Get user profile from Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // First time user - create profile
+        const newUserProfile = {
+          uid: user.uid,
+          email: user.email,
+          username: username,
+          role: 'user',
+          permissions: {},
+          isFirstLogin: true,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        };
+
+        await setDoc(userDocRef, newUserProfile);
+        navigate('/welcome');
+      } else {
+        // Existing user - update last login
+        const userData = userDoc.data();
+        await setDoc(userDocRef, {
+          ...userData,
+          lastLogin: new Date().toISOString()
+        }, { merge: true });
+
+        // Redirect based on user role and permissions
+        if (userData.role === 'administrator') {
+          navigate('/admin');
+        } else if (userData.isFirstLogin) {
+          navigate('/welcome');
+        } else {
+          navigate('/dashboard');
+        }
+      }
     } catch (error) {
       console.error('Login error:', error);
       setError('Invalid username or password');
@@ -81,6 +124,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                              hover:border-emerald-300"
                     placeholder="Username"
                     disabled={isLoading}
+                    required
                   />
                 </div>
               </motion.div>
@@ -104,6 +148,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                              hover:border-emerald-300"
                     placeholder="Password"
                     disabled={isLoading}
+                    required
                   />
                 </div>
               </motion.div>
@@ -125,7 +170,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? <LoadingSpinner /> : 'Sign in'}
               </motion.button>
             </form>
           </div>
