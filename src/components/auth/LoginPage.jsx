@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Lock } from 'lucide-react';
-import { auth, db } from '../config/firebase';
+import { auth, db } from '../../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import LoadingSpinner from './LoadingSpinner';
+import { doc, getDoc } from 'firebase/firestore';
+import LoadingSpinner from '../common/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
@@ -25,47 +25,31 @@ const LoginPage = () => {
       
       // Attempt to sign in
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
+      
       // Get user profile from Firestore
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        // First time user - create profile
-        const newUserProfile = {
-          uid: user.uid,
-          email: user.email,
-          username: username,
-          role: 'user',
-          permissions: {},
-          isFirstLogin: true,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString()
-        };
+        throw new Error('User profile not found');
+      }
 
-        await setDoc(userDocRef, newUserProfile);
-        navigate('/welcome');
+      const userData = userDoc.data();
+      
+      // Check if user is active
+      if (userData.status !== 'active') {
+        throw new Error('Account is inactive. Please contact administrator.');
+      }
+
+      // Navigate based on role
+      if (userData.role === 'ADMINISTRATOR') {
+        navigate('/admin');
       } else {
-        // Existing user - update last login
-        const userData = userDoc.data();
-        await setDoc(userDocRef, {
-          ...userData,
-          lastLogin: new Date().toISOString()
-        }, { merge: true });
-
-        // Redirect based on user role and permissions
-        if (userData.role === 'administrator') {
-          navigate('/admin');
-        } else if (userData.isFirstLogin) {
-          navigate('/welcome');
-        } else {
-          navigate('/dashboard');
-        }
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('Invalid username or password');
+      setError(error.message || 'Invalid username or password');
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +154,14 @@ const LoginPage = () => {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
               >
-                {isLoading ? <LoadingSpinner /> : 'Sign in'}
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <LoadingSpinner size="small" />
+                    <span className="ml-2">Signing in...</span>
+                  </div>
+                ) : (
+                  'Sign in'
+                )}
               </motion.button>
             </form>
           </div>
