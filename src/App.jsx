@@ -34,7 +34,7 @@ const LoadingScreen = () => (
 // Session Handler Component
 const SessionHandler = ({ children }) => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+
   
   useEffect(() => {
     let timeoutId;
@@ -45,10 +45,7 @@ const SessionHandler = ({ children }) => {
         timeoutId = setTimeout(async () => {
           try {
             await signOut();
-            navigate('/login', { 
-              replace: true,
-              state: { message: 'Session expired. Please login again.' }
-            });
+            window.location.replace('/login');
           } catch (error) {
             console.error('Session timeout error:', error);
           }
@@ -76,7 +73,7 @@ const SessionHandler = ({ children }) => {
         document.removeEventListener(event, resetTimer);
       });
     };
-  }, [user, signOut, navigate]);
+  }, [user, signOut]);
 
   return children;
 };
