@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -11,15 +12,24 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    assetsDir: 'assets',
+    manifest: true, // Add this line
     rollupOptions: {
-      external: ['recharts'],
       output: {
-        globals: {
-          recharts: 'Recharts'
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'ui': ['framer-motion', 'lucide-react'],
+          'charts': ['recharts']
         }
       }
     }
   },
+    server: {
+    port: 3000,
+    host: true,
+    strictPort: true
+  }
   optimizeDeps: {
     include: [
       'react',
