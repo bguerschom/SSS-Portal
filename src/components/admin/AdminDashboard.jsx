@@ -14,9 +14,10 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  BarChart
+  BarChart,
+  UserPlus
 } from 'lucide-react';
-import { db } from '../config/firebase'; 
+import { db } from '../../config/firebase';
 import { 
   collection, 
   query, 
@@ -26,10 +27,12 @@ import {
   where,
   orderBy,
   limit,
-  serverTimestamp 
+  serverTimestamp,
+  addDoc 
 } from 'firebase/firestore';
 import UserEditModal from './UserEditModal';
-import { useAuth } from '../contexts/AuthContext';
+import CreateUserModal from './CreateUserModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminDashboard = () => {
   // States
@@ -47,6 +50,7 @@ const AdminDashboard = () => {
     recentActivity: 0
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { userProfile } = useAuth();
 
@@ -54,8 +58,17 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchUsers();
     fetchActivityLogs();
-    calculateStats();
   }, []);
+
+  // Auto-hide messages after 5 seconds
+  useEffect(() => {
+    if (message.text) {
+      const timer = setTimeout(() => {
+        setMessage({ type: '', text: '' });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -116,6 +129,26 @@ const AdminDashboard = () => {
     setStats(stats);
   };
 
+  // Handle user creation success
+  const handleUserCreated = async (newUser) => {
+    setMessage({ type: 'success', text: 'User created successfully' });
+    await fetchUsers();
+    await fetchActivityLogs();
+    
+    // Log activity
+    try {
+      await addDoc(collection(db, 'activityLogs'), {
+        type: 'USER_CREATE',
+        performedBy: userProfile.email,
+        targetUser: newUser.email,
+        details: `Created new user: ${newUser.email}`,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  };
+
   // Update user
   const handleUpdateUser = async (userId, updatedData) => {
     try {
@@ -127,8 +160,7 @@ const AdminDashboard = () => {
       });
 
       // Log activity
-      const activityRef = collection(db, 'activityLogs');
-      await addDoc(activityRef, {
+      await addDoc(collection(db, 'activityLogs'), {
         type: 'USER_UPDATE',
         performedBy: userProfile.email,
         targetUser: userId,
@@ -147,7 +179,7 @@ const AdminDashboard = () => {
 
   // Filter users
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole ? user.role === filterRole : true;
     const matchesStatus = filterStatus ? user.status === filterStatus : true;
     return matchesSearch && matchesRole && matchesStatus;
@@ -179,63 +211,40 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
-              </div>
-              <Users className="h-8 w-8 text-emerald-600" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Active Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activeUsers}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-emerald-600" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Admin Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.adminUsers}</p>
-              </div>
-              <Shield className="h-8 w-8 text-emerald-600" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Recent Activities</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.recentActivity}</p>
-              </div>
-              <Activity className="h-8 w-8 text-emerald-600" />
-            </div>
-          </motion.div>
+          <StatsCard
+            title="Total Users"
+            value={stats.totalUsers}
+            icon={Users}
+          />
+          <StatsCard
+            title="Active Users"
+            value={stats.activeUsers}
+            icon={CheckCircle}
+          />
+          <StatsCard
+            title="Admin Users"
+            value={stats.adminUsers}
+            icon={Shield}
+          />
+          <StatsCard
+            title="Recent Activities"
+            value={stats.recentActivity}
+            icon={Activity}
+          />
         </div>
 
         {/* User Management Section */}
         <div className="bg-white rounded-lg shadow-sm mb-8">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 
+                        transition-colors flex items-center space-x-2"
+            >
+              <UserPlus className="h-5 w-5" />
+              <span>Create User</span>
+            </button>
           </div>
 
           {/* Search and Filters */}
@@ -247,9 +256,9 @@ const AdminDashboard = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search users..."
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 pl-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
 
               <div className="flex space-x-4">
@@ -423,7 +432,24 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Success/Error Messages */}
+        {/* Modals */}
+        <AnimatePresence>
+          {showCreateModal && (
+            <CreateUserModal
+              onClose={() => setShowCreateModal(false)}
+              onSuccess={handleUserCreated}
+            />
+          )}
+          {selectedUser && (
+            <UserEditModal
+              user={selectedUser}
+              onClose={() => setSelectedUser(null)}
+              onSave={handleUpdateUser}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Messages */}
         <AnimatePresence>
           {message.text && (
             <motion.div
@@ -448,17 +474,6 @@ const AdminDashboard = () => {
           )}
         </AnimatePresence>
 
-        {/* User Edit Modal */}
-        <AnimatePresence>
-          {selectedUser && (
-            <UserEditModal
-              user={selectedUser}
-              onClose={() => setSelectedUser(null)}
-              onSave={handleUpdateUser}
-            />
-          )}
-        </AnimatePresence>
-
         {/* Loading Overlay */}
         <AnimatePresence>
           {loading && (
@@ -478,5 +493,21 @@ const AdminDashboard = () => {
     </div>
   );
 };
+
+// Stats Card Component
+const StatsCard = ({ title, value, icon: Icon }) => (
+  <motion.div
+    whileHover={{ scale: 1.02 }}
+    className="bg-white rounded-lg shadow-sm p-6"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">{title}</p>
+        <p className="text-2xl font-semibold text-gray-900">{value}</p>
+      </div>
+      <Icon className="h-8 w-8 text-emerald-600" />
+    </div>
+  </motion.div>
+);
 
 export default AdminDashboard;
