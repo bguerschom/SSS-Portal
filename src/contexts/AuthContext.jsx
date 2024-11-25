@@ -2,9 +2,15 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../config/firebase';
 import { 
   signInWithEmailAndPassword, 
-  signOut as firebaseSignOut 
+  signOut as firebaseSignOut,
+  onAuthStateChanged 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -32,33 +38,76 @@ export const AuthProvider = ({ children }) => {
 
   // Auth state listener
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
 
           if (!userDoc.exists()) {
-            // Create new user profile for first-time users
             const newProfile = {
               uid: user.uid,
               email: user.email,
               role: 'USER',
-              permissions: {},
+              status: 'active',
+              permissions: {
+                stakeholder: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                backgroundCheck: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                badgeRequest: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                accessRequest: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                attendance: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                visitorsManagement: {
+                  view: false,
+                  create: false,
+                  edit: false,
+                  delete: false
+                },
+                reports: {
+                  view: false,
+                  create: false
+                }
+              },
               isFirstLogin: true,
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString(),
-              status: 'active'
+              createdAt: serverTimestamp(),
+              lastLogin: serverTimestamp()
             };
+            
             await setDoc(userDocRef, newProfile);
             setUserProfile(newProfile);
           } else {
-            // Update existing user's last login
-            const existingProfile = userDoc.data();
-            await updateDoc(userDocRef, {
-              lastLogin: new Date().toISOString()
-            });
-            setUserProfile(existingProfile);
+            // Update last login
+            const userData = userDoc.data();
+            await setDoc(
+              userDocRef, 
+              { lastLogin: serverTimestamp() }, 
+              { merge: true }
+            );
+            setUserProfile(userData);
           }
           setUser(user);
         } else {
@@ -67,36 +116,31 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Auth state change error:', err);
-        setError('Authentication error: ' + err.message);
-        setUser(null);
-        setUserProfile(null);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
-  // Sign in function
   const signIn = async (email, password) => {
     try {
       setLoading(true);
-      setError(null);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
       
       // Check if user is active
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       const userData = userDoc.data();
       
       if (userData?.status !== 'active') {
         await firebaseSignOut(auth);
         throw new Error('Account is inactive. Please contact administrator.');
       }
-
-      return userCredential.user;
+      
+      return result;
     } catch (err) {
-      console.error('Sign in error:', err);
       setError(err.message);
       throw err;
     } finally {
@@ -104,52 +148,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Sign out function
   const signOut = async () => {
     try {
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(
+          userDocRef,
+          { lastLogout: serverTimestamp() },
+          { merge: true }
+        );
+      }
       await firebaseSignOut(auth);
     } catch (err) {
-      console.error('Sign out error:', err);
       setError(err.message);
       throw err;
     }
   };
 
-  // Permission checking
   const hasPermission = (module, action) => {
     if (!userProfile) return false;
     if (userProfile.role === 'ADMINISTRATOR') return true;
-    
-    const modulePermissions = userProfile.permissions?.[module];
-    if (!modulePermissions) return false;
-    
-    if (action === 'view') {
-      return Object.values(modulePermissions).some(permission => permission === true);
-    }
-    
-    return modulePermissions[action] === true;
+    return userProfile.permissions?.[module]?.[action] === true;
   };
 
   const isAdmin = () => userProfile?.role === 'ADMINISTRATOR';
   const isFirstTimeUser = () => userProfile?.isFirstLogin === true;
-
-  // Profile update function
-  const updateUserProfile = async (updates) => {
-    if (!user) throw new Error('No authenticated user');
-    
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      });
-      setUserProfile(prev => ({ ...prev, ...updates }));
-    } catch (err) {
-      console.error('Profile update error:', err);
-      setError(err.message);
-      throw err;
-    }
-  };
 
   const value = {
     user,
@@ -161,7 +184,6 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     isAdmin,
     isFirstTimeUser,
-    updateUserProfile
   };
 
   return (
@@ -170,3 +192,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;
